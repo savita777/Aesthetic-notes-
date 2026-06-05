@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FFF0F5",
+    "splash": {
+      "backgroundColor": "#FFF0F5"
+    },
     "android": {
       "package": "com.aesthetic.notes"
     }
