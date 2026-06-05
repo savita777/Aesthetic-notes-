@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Aesthetic Notes 🎀",
+    "slug": "aesthetic-notes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFF0F5",
+    "android": {
+      "package": "com.aesthetic.notes"
+    }
+  }
+}
