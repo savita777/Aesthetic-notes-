@@ -43,8 +43,8 @@ export default function App() {
     return `${dateStr} 🎀 - ${timeStr}`;
   };
 
-  // Note save karne ka main function (Isme ab doodle bhi add ho gaya hai)
-  const handleSaveNote = (title, content, color, folder, doodle) => {
+  // Note save karne ka main function (Isme ab placedItems add ho gaya hai)
+  const handleSaveNote = (title, content, color, folder, doodle, placedItems) => {
     let updatedNotes = [...notes];
     const aestheticDate = getAestheticDate();
     
@@ -57,6 +57,7 @@ export default function App() {
         color, 
         folder, 
         doodle, 
+        placedItems, // Naya drag & drop stickers ka data
         date: aestheticDate 
       } : n);
     } else {
@@ -68,6 +69,7 @@ export default function App() {
         color, 
         folder: folder || '📔 Diary', 
         doodle, 
+        placedItems, // Naya drag & drop stickers ka data
         date: aestheticDate
       };
       updatedNotes.unshift(newNote); // Naya note list mein sabse upar dikhega
@@ -102,4 +104,4 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background }
 });
-                                   
+    
