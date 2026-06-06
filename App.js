@@ -7,56 +7,46 @@ import { Colors } from './src/theme/colors';
 
 export default function App() {
   const [notes, setNotes] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('home'); // 'home' ya 'note'
+  const [currentScreen, setCurrentScreen] = useState('home');
   const [selectedNote, setSelectedNote] = useState(null);
 
-  // App khulte hi phone ki memory se data load karo
-  useEffect(() => {
-    loadNotes();
-  }, []);
+  useEffect(() => { loadNotes(); }, []);
 
   const loadNotes = async () => {
     try {
       const savedNotes = await AsyncStorage.getItem('@aesthetic_notes');
-      if (savedNotes !== null) {
-        setNotes(JSON.parse(savedNotes));
-      }
-    } catch (e) {
-      console.log("Notes load karne mein error aaya:", e);
-    }
+      if (savedNotes !== null) setNotes(JSON.parse(savedNotes));
+    } catch (e) { console.log(e); }
   };
 
   const saveNotesToStorage = async (newNotes) => {
     try {
       await AsyncStorage.setItem('@aesthetic_notes', JSON.stringify(newNotes));
       setNotes(newNotes);
-    } catch (e) {
-      console.log("Notes save karne mein error aaya:", e);
-    }
+    } catch (e) { console.log(e); }
   };
 
-  const handleSaveNote = (title, content) => {
+  const getAestheticDate = () => {
+    const options = { weekday: 'long', day: 'numeric', month: 'long' };
+    return `${new Date().toLocaleDateString('en-IN', options)} 🎀`;
+  };
+
+  // Yahan 'folder' parameter add kiya gaya hai
+  const handleSaveNote = (title, content, color, folder) => {
     let updatedNotes = [...notes];
+    const aestheticDate = getAestheticDate();
     
     if (selectedNote) {
-      // Purane note ko edit kar rahe hain
       updatedNotes = notes.map(n => n.id === selectedNote.id ? { 
-        ...n, 
-        title, 
-        content, 
-        date: new Date().toLocaleDateString('en-IN') 
+        ...n, title, content, color, folder, date: aestheticDate 
       } : n);
     } else {
-      // Naya note bana rahe hain
       const newNote = {
         id: Date.now().toString(),
-        title,
-        content,
-        date: new Date().toLocaleDateString('en-IN')
+        title, content, color, folder: folder || '📔 Diary', date: aestheticDate
       };
-      updatedNotes.unshift(newNote); // Naya note list mein sabse upar dikhega
+      updatedNotes.unshift(newNote);
     }
-
     saveNotesToStorage(updatedNotes);
     setCurrentScreen('home');
     setSelectedNote(null);
@@ -65,7 +55,6 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
-      
       {currentScreen === 'home' ? (
         <HomeScreen 
           notes={notes}
@@ -83,7 +72,4 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background }
-});
-        
+const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: Colors.background } });
