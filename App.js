@@ -7,46 +7,72 @@ import { Colors } from './src/theme/colors';
 
 export default function App() {
   const [notes, setNotes] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('home');
+  const [currentScreen, setCurrentScreen] = useState('home'); // 'home' ya 'note'
   const [selectedNote, setSelectedNote] = useState(null);
 
-  useEffect(() => { loadNotes(); }, []);
+  // App khulte hi phone ki memory se data load karo
+  useEffect(() => {
+    loadNotes();
+  }, []);
 
   const loadNotes = async () => {
     try {
       const savedNotes = await AsyncStorage.getItem('@aesthetic_notes');
-      if (savedNotes !== null) setNotes(JSON.parse(savedNotes));
-    } catch (e) { console.log(e); }
+      if (savedNotes !== null) {
+        setNotes(JSON.parse(savedNotes));
+      }
+    } catch (e) {
+      console.log("Notes load karne mein error aaya:", e);
+    }
   };
 
   const saveNotesToStorage = async (newNotes) => {
     try {
       await AsyncStorage.setItem('@aesthetic_notes', JSON.stringify(newNotes));
       setNotes(newNotes);
-    } catch (e) { console.log(e); }
+    } catch (e) {
+      console.log("Notes save karne mein error aaya:", e);
+    }
   };
 
+  // Date ko cute format mein set karne ke liye
   const getAestheticDate = () => {
     const options = { weekday: 'long', day: 'numeric', month: 'long' };
-    return `${new Date().toLocaleDateString('en-IN', options)} 🎀`;
+    const dateStr = new Date().toLocaleDateString('en-IN', options);
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    return `${dateStr} 🎀 - ${timeStr}`;
   };
 
-  // Yahan 'folder' parameter add kiya gaya hai
-  const handleSaveNote = (title, content, color, folder) => {
+  // Note save karne ka main function (Isme ab doodle bhi add ho gaya hai)
+  const handleSaveNote = (title, content, color, folder, doodle) => {
     let updatedNotes = [...notes];
     const aestheticDate = getAestheticDate();
     
     if (selectedNote) {
+      // Purane note ko update kar rahe hain
       updatedNotes = notes.map(n => n.id === selectedNote.id ? { 
-        ...n, title, content, color, folder, date: aestheticDate 
+        ...n, 
+        title, 
+        content, 
+        color, 
+        folder, 
+        doodle, 
+        date: aestheticDate 
       } : n);
     } else {
+      // Naya note bana rahe hain
       const newNote = {
         id: Date.now().toString(),
-        title, content, color, folder: folder || '📔 Diary', date: aestheticDate
+        title, 
+        content, 
+        color, 
+        folder: folder || '📔 Diary', 
+        doodle, 
+        date: aestheticDate
       };
-      updatedNotes.unshift(newNote);
+      updatedNotes.unshift(newNote); // Naya note list mein sabse upar dikhega
     }
+
     saveNotesToStorage(updatedNotes);
     setCurrentScreen('home');
     setSelectedNote(null);
@@ -55,6 +81,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
+      
       {currentScreen === 'home' ? (
         <HomeScreen 
           notes={notes}
@@ -72,4 +99,7 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: Colors.background } });
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background }
+});
+                                   
