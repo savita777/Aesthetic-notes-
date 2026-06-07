@@ -1,16 +1,31 @@
 {
   "expo": {
-    "name": "Aesthetic Notes 🎀",
+    "name": "Cute Diary",
     "slug": "aesthetic-notes",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#FFF0F5",
     "splash": {
-      "backgroundColor": "#FFF0F5"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFE4E1"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.aesthetic.notes"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFE4E1"
+      },
+      "package": "com.devraj.cutediary"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     }
   }
 }
