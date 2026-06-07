@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SplashScreen from 'expo-splash-screen'; // 👈 Naya Import
+import * as SplashScreen from 'expo-splash-screen'; // 👈 Library ab perfectly kaam karegi
 
 import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
 import { Colors } from './src/theme/colors';
 
-// App render hone se pehle splash screen ko rokne ka command (Hold) 🛑
+// App load hote hi splash screen ko tab tak roko jab tak hum na kahein 🛑
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
@@ -15,13 +15,12 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('home'); // 'home' ya 'note'
   const [selectedNote, setSelectedNote] = useState(null);
 
-  // 👇 NAYA JADOO: 3-Second Splash Screen Timer 🪄
+  // 🪄 THE 3-SECOND SPLASH SCREEN MAGIC HOLD
   useEffect(() => {
     setTimeout(async () => {
-      await SplashScreen.hideAsync(); // 3 second baad splash screen hatao
+      await SplashScreen.hideAsync(); // 3 second baad aaram se screen hatega
     }, 3000); 
   }, []);
-  // 👆 Yahan tak naya code hai 
 
   // App khulte hi phone ki memory se data load karo
   useEffect(() => {
@@ -56,7 +55,7 @@ export default function App() {
     return `${dateStr} 🎀 - ${timeStr}`;
   };
 
-  // Note save karne ka main function (Isme ab placedItems add ho gaya hai)
+  // Note save karne ka main function
   const handleSaveNote = (title, content, color, folder, doodle, placedItems) => {
     let updatedNotes = [...notes];
     const aestheticDate = getAestheticDate();
@@ -70,7 +69,7 @@ export default function App() {
         color, 
         folder, 
         doodle, 
-        placedItems, // Naya drag & drop stickers ka data
+        placedItems, // Drag & drop stickers ka data
         date: aestheticDate 
       } : n);
     } else {
@@ -82,7 +81,7 @@ export default function App() {
         color, 
         folder: folder || '📔 Diary', 
         doodle, 
-        placedItems, // Naya drag & drop stickers ka data
+        placedItems, // Drag & drop stickers ka data
         date: aestheticDate
       };
       updatedNotes.unshift(newNote); // Naya note list mein sabse upar dikhega
