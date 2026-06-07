@@ -5,10 +5,16 @@ import { Colors } from '../theme/colors';
 // 🔥 NAYA: Daily Streak Widget Import Kiya
 import DailyStreakWidget from '../components/DailyStreakWidget';
 
+// 📸 NAYA: Studygram Share Modal Import Kiya
+import StudygramShareModal from '../components/StudygramShareModal';
+
 export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
   // 📚 Naye Study Subjects
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
+
+  // 📸 NAYA: Share Modal kholne ke liye state
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Sirf chune hue subject ke notes dikhao
   const filteredNotes = activeSubject === 'All Notes' ? notes : notes.filter(n => n.folder === activeSubject);
@@ -42,10 +48,17 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
   return (
     <View style={styles.container}>
-      {/* 🌸 Header */}
+      {/* 🌸 Header with Share Button */}
       <View style={styles.header}>
-        <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
-        <Text style={styles.headerTitle}>My Study Space</Text>
+        <View>
+          <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
+          <Text style={styles.headerTitle}>My Study Space</Text>
+        </View>
+
+        {/* 📸 NAYA: Share Button */}
+        <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
+          <Text style={styles.shareIconText}>📸 Share</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 🔥 NAYA: Daily Streak Widget Yahan Add Hua Hai */}
@@ -91,16 +104,48 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
       <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
         <Text style={styles.fabText}>✏️</Text>
       </TouchableOpacity>
+
+      {/* 📸 NAYA: The Modal Component */}
+      <StudygramShareModal 
+        visible={showShareModal} 
+        onClose={() => setShowShareModal(false)} 
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', paddingTop: 60 }, // Aesthetic off-white bg
-  header: { paddingHorizontal: 20, marginBottom: 10 }, // 🔥 Margin thoda kam kiya widget ke liye
+  
+  // 📸 Updated Header Layout
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    marginBottom: 10 
+  }, 
   greetingText: { fontSize: 16, color: '#A09E9F', fontWeight: '600', marginBottom: 5 },
   headerTitle: { fontSize: 34, fontWeight: '800', color: '#2D2A2E', letterSpacing: -0.5 },
   
+  // 📸 NAYA: Share Button Styles
+  shareIconBtn: {
+    backgroundColor: '#FFB3BA', // Soft Pink
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: '#FFB3BA',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  shareIconText: {
+    color: '#2D2A2E',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+
   // 🔥 NAYA: Widget ko set karne ke liye styling
   widgetContainer: {
     marginBottom: 20,
@@ -186,4 +231,4 @@ const styles = StyleSheet.create({
   },
   fabText: { fontSize: 26, marginLeft: 3 }
 });
-               
+  
