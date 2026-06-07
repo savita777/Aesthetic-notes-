@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Cute Diary",
-    "slug": "aesthetic-notes",
+    "name": "Lumina Notes",
+    "slug": "lumina-notes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFE4E1"
+      "backgroundColor": "#FFE4E1" 
     },
     "assetBundlePatterns": [
       "**/*"
@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#FFE4E1"
       },
-      "package": "com.devraj.cutediary"
+      "package": "com.devraj.luminanotes"
     },
     "web": {
       "favicon": "./assets/favicon.png"
