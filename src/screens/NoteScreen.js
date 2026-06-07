@@ -8,6 +8,9 @@ import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
 
+// ✨ NAYA: AI Spark Modal Import Kiya
+import AiSparkModal from '../components/AiSparkModal';
+
 const { width, height } = Dimensions.get('window');
 
 export default function NoteScreen({ note, onSave, onBack }) {
@@ -18,6 +21,10 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const [doodle, setDoodle] = useState(null);
   const [showDraw, setShowDraw] = useState(false);
   const [showPomodoro, setShowPomodoro] = useState(false);
+  
+  // ✨ NAYA: AI Modal ki State
+  const [showAiModal, setShowAiModal] = useState(false);
+
   const [placedItems, setPlacedItems] = useState([]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
 
@@ -77,11 +84,9 @@ export default function NoteScreen({ note, onSave, onBack }) {
     });
   };
 
-  // 🚀 NAYA: HD Infinite Canvas PDF Engine
   const generatePDF = async () => {
     if (!title.trim()) { Alert.alert('Oops!', 'Please enter a Topic Title! 📚'); return; }
     try {
-      // Pura lamba canvas high quality PNG mein capture hoga
       const uri = await noteViewShotRef.current.capture({ format: 'png', quality: 1 });
       
       const htmlContent = `
@@ -93,8 +98,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
               .header { text-align: left; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #EAE6E1; }
               h1 { color: #2D2A2E; margin: 0; border-left: 5px solid #FFD1DC; padding-left: 15px;}
               .folder-tag { color: #888; font-size: 14px; margin-top: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-              
-              /* Full width auto-scaling image CSS */
               .canvas-img { 
                 width: 100%; 
                 height: auto; 
@@ -111,10 +114,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
               <h1>${title}</h1>
               <div class="folder-tag">${folder || 'General Notes'}</div>
             </div>
-            
-            <!-- Screenshot yahan place hoga -->
             <img src="${uri}" class="canvas-img" />
-            
             <div class="watermark">Crafted with ✨ Lumina Notes</div>
           </body>
         </html>
@@ -122,6 +122,13 @@ export default function NoteScreen({ note, onSave, onBack }) {
       const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(pdfUri);
     } catch (error) { Alert.alert('Error', 'PDF Export Failed: ' + error.message); }
+  };
+
+  // ✨ NAYA: AI Action Handler (Abhi ke liye Mock Alert)
+  const handleAiAction = (actionId) => {
+    setTimeout(() => {
+      Alert.alert('✨ Lumina AI Magic', `The '${actionId}' feature is connecting to Gemini. Coming in the PRO update! 🚀`);
+    }, 500);
   };
 
   return (
@@ -151,6 +158,12 @@ export default function NoteScreen({ note, onSave, onBack }) {
       <View style={styles.toolboxBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
           
+          {/* ✨ NAYA: AI Spark Button */}
+          <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}>
+            <Text style={styles.aiBtnText}>✨ AI Spark</Text>
+          </TouchableOpacity>
+          <View style={styles.verticalDivider} />
+
           <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}>
             <Text style={styles.pomodoroBtnText}>⏱️ Focus</Text>
           </TouchableOpacity>
@@ -181,20 +194,16 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </ScrollView>
       </View>
 
-      {/* 🚀 THE FIX: Master Wrapper Jiske Andar Canvas Infinite Lamba Hoga */}
       <View style={styles.masterCanvasWrapper}>
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-          
           <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
             
-            {/* 150 Lines taaki bacche kitna bhi lamba likhein, lines khatam na hon */}
             <View style={styles.ruledLinesContainer} pointerEvents="none">
                {[...Array(150)].map((_, i) => (
                  <View key={i} style={styles.ruledLine} />
                ))}
             </View>
             
-            {/* scrollEnabled={false} isliye lagaya taaki Text input text ke hisab se lamba ho */}
             <TextInput 
               style={styles.contentInput} 
               multiline 
@@ -217,12 +226,11 @@ export default function NoteScreen({ note, onSave, onBack }) {
             ))}
             
           </ViewShot>
-
         </ScrollView>
       </View>
 
       <TouchableOpacity style={styles.pdfButton} onPress={generatePDF}>
-        <Text style={styles.buttonText}>📤 Export PDF</Text>
+        <Text style={styles.buttonText}>📤 Export HD PDF</Text>
       </TouchableOpacity>
 
       <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
@@ -235,6 +243,13 @@ export default function NoteScreen({ note, onSave, onBack }) {
           <AestheticPomodoro />
         </View>
       </Modal>
+
+      {/* ✨ NAYA: AI Spark Modal Component */}
+      <AiSparkModal 
+        visible={showAiModal} 
+        onClose={() => setShowAiModal(false)} 
+        onSelectAction={handleAiAction}
+      />
 
     </View>
   );
@@ -252,6 +267,10 @@ const styles = StyleSheet.create({
   
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
   
+  // ✨ NAYA: AI Button Styling
+  aiBtn: { backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
+  aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+
   pomodoroBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   pomodoroBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
   
@@ -268,13 +287,10 @@ const styles = StyleSheet.create({
   drawBtn: { backgroundColor: '#E6E6FA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 5 },
   drawBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
   
-  // 🚀 NAYA: Master Canvas Styles
   masterCanvasWrapper: { flex: 1, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EAE6E1', overflow: 'hidden', backgroundColor: '#FFF' }, 
   noteContainer: { minHeight: height * 0.6, paddingHorizontal: 15, paddingTop: 10, paddingBottom: 50, overflow: 'hidden' }, 
-  
   ruledLinesContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, paddingTop: 30 },
   ruledLine: { height: 35, borderBottomWidth: 1, borderBottomColor: 'rgba(160, 158, 159, 0.2)' },
-  
   contentInput: { fontSize: 17, lineHeight: 35, color: '#2D2A2E', textAlignVertical: 'top', zIndex: 1 },
   highlightedText: { backgroundColor: '#FDFD96', fontWeight: '600' }, 
   
@@ -285,3 +301,4 @@ const styles = StyleSheet.create({
   pdfButton: { padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EAE6E1', elevation: 2 },
   buttonText: { color: '#2D2A2E', fontSize: 16, fontWeight: '700' }
 });
+                                  
