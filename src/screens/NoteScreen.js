@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal } from 'react-native'; // ⏱️ NAYA: Modal import kiya
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import { Colors } from '../theme/colors';
 import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
+
+// ⏱️ NAYA: Pomodoro Component Import kiya
+import AestheticPomodoro from '../components/AestheticPomodoro';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +22,10 @@ export default function NoteScreen({ note, onSave, onBack }) {
   
   const [doodle, setDoodle] = useState(null);
   const [showDraw, setShowDraw] = useState(false);
+  
+  // ⏱️ NAYA: Pomodoro Timer Modal ki State
+  const [showPomodoro, setShowPomodoro] = useState(false);
+
   const [placedItems, setPlacedItems] = useState([]);
   
   // 🖍️ NAYA: Text Selection ke liye state (Highlighter ke liye)
@@ -142,6 +149,13 @@ export default function NoteScreen({ note, onSave, onBack }) {
       <View style={styles.toolboxBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
           
+          {/* ⏱️ NAYA: Focus / Pomodoro Button */}
+          <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}>
+            <Text style={styles.pomodoroBtnText}>⏱️ Focus</Text>
+          </TouchableOpacity>
+
+          <View style={styles.verticalDivider} />
+
           {/* 🖍️ Neon Highlighter Button */}
           <TouchableOpacity onPress={applyHighlight} style={styles.highlightBtn}>
             <Text style={styles.highlightBtnText}>🖍️ Mark</Text>
@@ -211,6 +225,17 @@ export default function NoteScreen({ note, onSave, onBack }) {
       </TouchableOpacity>
 
       <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
+
+      {/* ⏱️ NAYA: Aesthetic Pomodoro Modal */}
+      <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
+        <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
+          <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}>
+            <Text style={styles.closePomodoroText}>✕ Close Timer</Text>
+          </TouchableOpacity>
+          <AestheticPomodoro />
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -227,6 +252,14 @@ const styles = StyleSheet.create({
   
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
   
+  // ⏱️ NAYA: Pomodoro Button Styles
+  pomodoroBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
+  pomodoroBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
+  
+  // ⏱️ NAYA: Pomodoro Close Button Styles
+  closePomodoroBtn: { position: 'absolute', top: 40, right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 15, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: '#EAE6E1' },
+  closePomodoroText: { fontSize: 13, fontWeight: '800', color: '#2D2A2E', letterSpacing: 0.5 },
+
   highlightBtn: { backgroundColor: '#FDFD96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   highlightBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
   
@@ -253,4 +286,3 @@ const styles = StyleSheet.create({
   pdfButton: { padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EAE6E1', elevation: 2 },
   buttonText: { color: '#2D2A2E', fontSize: 16, fontWeight: '700' }
 });
-    
