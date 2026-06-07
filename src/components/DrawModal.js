@@ -1,135 +1,173 @@
-import React, { useState, useRef } from 'react';
-import { Modal, View, StyleSheet, TouchableOpacity, Text, PanResponder, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, View, StyleSheet, TouchableOpacity, Text, SafeAreaView } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import ViewShot from 'react-native-view-shot';
+
+const COLORS = ['#000000', '#FF69B4', '#8A2BE2', '#4169E1', '#32CD32', '#FFD700', '#FFFFFF'];
+const WIDTHS = [3, 8, 15]; // Patla, Medium, Mota
 
 export default function DrawModal({ visible, onClose, onSave }) {
   const [paths, setPaths] = useState([]);
-  const [currentPath, setCurrentPath] = useState([]);
-  const [activeColor, setActiveColor] = useState('#FF69B4'); // Hot Pink
-  
-  const viewShotRef = useRef();
+  const [currentPath, setCurrentPath] = useState(null);
+  const [selectedColor, setSelectedColor] = useState('#FF69B4'); // Default Pink
+  const [selectedWidth, setSelectedWidth] = useState(8);
 
-  // The Magic Touch Engine
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath([`${locationX},${locationY}`]);
-      },
-      onPanResponderMove: (evt) => {
-        const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath(prev => [...prev, `${locationX},${locationY}`]);
-      },
-      onPanResponderRelease: () => {
-        setPaths(prev => [...prev, { points: currentPath, color: activeColor }]);
-        setCurrentPath([]);
-      }
-    })
-  ).current;
+  // Drawing shuru hote hi naya path banao
+  const onTouchStart = (event) => {
+    const { locationX, locationY } = event.nativeEvent;
+    setCurrentPath({
+      d: `M${locationX},${locationY}`,
+      color: selectedColor,
+      strokeWidth: selectedWidth,
+    });
+  };
 
-  const handleSaveDoodle = async () => {
-    try {
-      const uri = await viewShotRef.current.capture();
-      onSave(uri);
-      setPaths([]); 
-      setCurrentPath([]);
-    } catch (e) {
-      console.log("Doodle save error: ", e);
+  // Ungli chalate waqt path ko bada karo (Ab ye line nahi mitegi!)
+  const onTouchMove = (event) => {
+    const { locationX, locationY } = event.nativeEvent;
+    if (currentPath) {
+      setCurrentPath(prev => ({
+        ...prev,
+        d: `${prev.d} L${locationX},${locationY}`,
+      }));
     }
   };
 
-  const handleClear = () => {
-    setPaths([]);
-    setCurrentPath([]);
+  // Ungli uthate hi path ko save kar lo
+  const onTouchEnd = () => {
+    if (currentPath) {
+      setPaths(prev => [...prev, currentPath]);
+      setCurrentPath(null);
+    }
   };
 
-  const cuteColors = ['#FF69B4', '#9370DB', '#00CED1', '#32CD32', '#FFA500', '#000000'];
+  const handleClear = () => setPaths([]);
+
+  // Ek step peeche jane ka jadoo
+  const handleUndo = () => {
+    setPaths(prev => prev.slice(0, -1));
+  };
+
+  const handleSave = () => {
+    onSave(paths); // Saved drawing ko NoteScreen bhejo
+    onClose();
+  };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
-      <SafeAreaView style={styles.modalContainer}>
+    <Modal visible={visible} animationType="slide">
+      <SafeAreaView style={styles.container}>
         
-        {/* Top Control Bar */}
+        {/* TOP TOOLBAR */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeBtn}>❌ Cancel</Text>
+          <TouchableOpacity onPress={onClose} style={styles.btn}>
+            <Text style={styles.btnText}>❌ Close</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleClear}>
-            <Text style={styles.clearBtn}>🗑️ Clear</Text>
+          <TouchableOpacity onPress={handleUndo} style={styles.btn}>
+            <Text style={styles.btnText}>↩️ Undo</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSaveDoodle} style={styles.saveBtn}>
-            <Text style={styles.saveText}>✅ Save</Text>
+          <TouchableOpacity onPress={handleClear} style={styles.btn}>
+            <Text style={styles.btnText}>🗑️ Clear</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSave} style={[styles.btn, styles.saveBtn]}>
+            <Text style={styles.saveBtnText}>✅ Save</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Cute Color Picker */}
-        <View style={styles.colorPicker}>
-          {cuteColors.map(color => (
-            <TouchableOpacity 
-              key={color} 
-              onPress={() => setActiveColor(color)} 
-              style={[
-                styles.colorBox, 
-                { backgroundColor: color, borderColor: '#333', borderWidth: activeColor === color ? 3 : 0 }
-              ]} 
-            />
-          ))}
+        {/* CANVAS - Drawing Area */}
+        <View 
+          style={styles.canvasContainer}
+          onStartShouldSetResponder={() => true} // Android ko force karega touch pakadne ke liye
+          onResponderGrant={onTouchStart}
+          onResponderMove={onTouchMove}
+          onResponderRelease={onTouchEnd}
+        >
+          <Svg style={StyleSheet.absoluteFill}>
+            {/* Pehle ki draw ki hui lines */}
+            {paths.map((p, index) => (
+              <Path
+                key={index}
+                d={p.d}
+                stroke={p.color}
+                strokeWidth={p.strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
+            {/* Jo line abhi draw ho rahi hai */}
+            {currentPath && (
+              <Path
+                d={currentPath.d}
+                stroke={currentPath.color}
+                strokeWidth={currentPath.strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+          </Svg>
         </View>
 
-        {/* Full Screen Drawing Canvas */}
-        <View style={styles.canvasWrapper}>
-          <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={styles.canvasContainer}>
-            <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers}>
-              <Svg style={StyleSheet.absoluteFill}>
-                {/* Crash Fix: points.length > 1 */}
-                {paths.map((p, index) => (
-                  p.points.length > 1 ? (
-                    <Path 
-                      key={index} 
-                      d={`M ${p.points.join(' L ')}`} 
-                      stroke={p.color} 
-                      strokeWidth={6} 
-                      fill="none" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                    />
-                  ) : null
-                ))}
-                {currentPath.length > 1 && (
-                  <Path 
-                    d={`M ${currentPath.join(' L ')}`} 
-                    stroke={activeColor} 
-                    strokeWidth={6} 
-                    fill="none" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                  />
-                )}
-              </Svg>
-            </View>
-          </ViewShot>
-        </View>
+        {/* BOTTOM TOOLBAR - Pen Features */}
+        <View style={styles.tools}>
+          
+          {/* Colors */}
+          <View style={styles.colorPicker}>
+            {COLORS.map(c => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.colorBox, 
+                  { backgroundColor: c, borderWidth: selectedColor === c ? 3 : 0 }
+                ]}
+                onPress={() => setSelectedColor(c)}
+              />
+            ))}
+          </View>
 
+          {/* Pen Thickness (Motai) */}
+          <View style={styles.widthPicker}>
+            {WIDTHS.map(w => (
+              <TouchableOpacity
+                key={w}
+                style={[
+                  styles.widthBox, 
+                  { borderColor: selectedWidth === w ? '#FF69B4' : '#ccc' }
+                ]}
+                onPress={() => setSelectedWidth(w)}
+              >
+                <View style={{ width: w * 1.5, height: w * 1.5, borderRadius: w, backgroundColor: selectedColor }} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+        </View>
       </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: { flex: 1, backgroundColor: '#FFE4E1' }, // Ye Full Screen karega
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40 },
-  closeBtn: { color: '#FF3B30', fontSize: 16, fontWeight: 'bold' },
-  clearBtn: { color: '#555', fontSize: 16, fontWeight: 'bold' },
-  saveBtn: { backgroundColor: '#FF69B4', paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20 },
-  saveText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  container: { flex: 1, backgroundColor: '#FFF0F5' }, // Blush Pink background
+  header: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: '#FFE4E1' },
+  btn: { padding: 8, borderRadius: 8, backgroundColor: '#fff', elevation: 2 },
+  saveBtn: { backgroundColor: '#FF69B4' },
+  btnText: { fontSize: 14, fontWeight: 'bold', color: '#333' },
+  saveBtnText: { fontSize: 14, fontWeight: 'bold', color: '#fff' },
   
-  colorPicker: { flexDirection: 'row', justifyContent: 'center', marginBottom: 15, gap: 10 },
-  colorBox: { width: 40, height: 40, borderRadius: 20, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 2 },
+  canvasContainer: { 
+    flex: 1, 
+    backgroundColor: '#fff', 
+    margin: 10, 
+    borderRadius: 15, 
+    overflow: 'hidden', 
+    elevation: 4 
+  },
   
-  canvasWrapper: { flex: 1, backgroundColor: '#FFF', borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden', elevation: 5 },
-  canvasContainer: { flex: 1, backgroundColor: '#FFF' }, 
+  tools: { padding: 20, backgroundColor: '#FFE4E1', borderTopLeftRadius: 25, borderTopRightRadius: 25 },
+  colorPicker: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
+  colorBox: { width: 35, height: 35, borderRadius: 17.5, borderColor: '#333' },
+  
+  widthPicker: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' },
+  widthBox: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
 });
     
