@@ -1,14 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SplashScreen from 'expo-splash-screen'; // 👈 Naya Import
+
 import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
 import { Colors } from './src/theme/colors';
+
+// App render hone se pehle splash screen ko rokne ka command (Hold) 🛑
+SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [notes, setNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('home'); // 'home' ya 'note'
   const [selectedNote, setSelectedNote] = useState(null);
+
+  // 👇 NAYA JADOO: 3-Second Splash Screen Timer 🪄
+  useEffect(() => {
+    setTimeout(async () => {
+      await SplashScreen.hideAsync(); // 3 second baad splash screen hatao
+    }, 3000); 
+  }, []);
+  // 👆 Yahan tak naya code hai 
 
   // App khulte hi phone ki memory se data load karo
   useEffect(() => {
