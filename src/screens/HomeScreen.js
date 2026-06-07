@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '../theme/colors';
 
+// 🔥 NAYA: Daily Streak Widget Import Kiya
+import DailyStreakWidget from '../components/DailyStreakWidget';
+
 export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
   // 📚 Naye Study Subjects
@@ -39,10 +42,15 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
   return (
     <View style={styles.container}>
-      {/* 🌸 New Header */}
+      {/* 🌸 Header */}
       <View style={styles.header}>
         <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
         <Text style={styles.headerTitle}>My Study Space</Text>
+      </View>
+
+      {/* 🔥 NAYA: Daily Streak Widget Yahan Add Hua Hai */}
+      <View style={styles.widgetContainer}>
+        <DailyStreakWidget />
       </View>
 
       {/* Subjects Scroll Bar */}
@@ -89,10 +97,17 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', paddingTop: 60 }, // Aesthetic off-white bg
-  header: { paddingHorizontal: 20, marginBottom: 20 },
+  header: { paddingHorizontal: 20, marginBottom: 10 }, // 🔥 Margin thoda kam kiya widget ke liye
   greetingText: { fontSize: 16, color: '#A09E9F', fontWeight: '600', marginBottom: 5 },
   headerTitle: { fontSize: 34, fontWeight: '800', color: '#2D2A2E', letterSpacing: -0.5 },
   
+  // 🔥 NAYA: Widget ko set karne ke liye styling
+  widgetContainer: {
+    marginBottom: 20,
+    width: '100%',
+    alignItems: 'center'
+  },
+
   subjectScrollBox: { marginBottom: 20 },
   subjectBtn: { 
     paddingVertical: 10, 
@@ -171,4 +186,4 @@ const styles = StyleSheet.create({
   },
   fabText: { fontSize: 26, marginLeft: 3 }
 });
-  
+               
