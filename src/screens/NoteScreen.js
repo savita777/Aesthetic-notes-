@@ -7,8 +7,6 @@ import { Colors } from '../theme/colors';
 import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
-
-// ✨ NAYA: AI Spark Modal Import Kiya
 import AiSparkModal from '../components/AiSparkModal';
 
 const { width, height } = Dimensions.get('window');
@@ -21,10 +19,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const [doodle, setDoodle] = useState(null);
   const [showDraw, setShowDraw] = useState(false);
   const [showPomodoro, setShowPomodoro] = useState(false);
-  
-  // ✨ NAYA: AI Modal ki State
   const [showAiModal, setShowAiModal] = useState(false);
-
   const [placedItems, setPlacedItems] = useState([]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
 
@@ -84,11 +79,31 @@ export default function NoteScreen({ note, onSave, onBack }) {
     });
   };
 
-  const generatePDF = async () => {
-    if (!title.trim()) { Alert.alert('Oops!', 'Please enter a Topic Title! 📚'); return; }
+  // ── Helper: convert 【text】 markers → <mark> tags ──────────────────────────
+  const convertHighlightsToHtml = (rawText) => {
+    const escaped = rawText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    return escaped.replace(
+      /【(.*?)】/g,
+      '<mark style="background-color:#FDFD96; padding:0 2px; border-radius:3px;">$1</mark>'
+    );
+  };
+
+  // ── 1. AESTHETIC PDF (Screenshot path) ──────────────────────────────────────
+  const generateAestheticPDF = async () => {
+    if (!title.trim()) {
+      Alert.alert('Oops!', 'Please enter a Topic Title! 📚');
+      return;
+    }
     try {
-      const uri = await noteViewShotRef.current.capture({ format: 'png', quality: 1 });
-      
+      const uri = await noteViewShotRef.current.capture({
+        format: 'png',
+        quality: 1,
+      });
+
       const htmlContent = `
         <html>
           <head>
@@ -96,16 +111,9 @@ export default function NoteScreen({ note, onSave, onBack }) {
             <style>
               body { font-family: 'Helvetica', sans-serif; padding: 20px; background-color: #FAF8F5; margin: 0; }
               .header { text-align: left; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #EAE6E1; }
-              h1 { color: #2D2A2E; margin: 0; border-left: 5px solid #FFD1DC; padding-left: 15px;}
+              h1 { color: #2D2A2E; margin: 0; border-left: 5px solid #FFD1DC; padding-left: 15px; }
               .folder-tag { color: #888; font-size: 14px; margin-top: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-              .canvas-img { 
-                width: 100%; 
-                height: auto; 
-                display: block; 
-                image-rendering: high-quality;
-                border-radius: 10px; 
-                box-shadow: 0px 10px 30px rgba(0,0,0,0.08); 
-              }
+              .canvas-img { width: 100%; height: auto; display: block; image-rendering: high-quality; border-radius: 10px; box-shadow: 0px 10px 30px rgba(0,0,0,0.08); }
               .watermark { text-align: center; margin-top: 30px; font-size: 12px; color: #C8BDBE; font-style: italic; }
             </style>
           </head>
@@ -119,12 +127,109 @@ export default function NoteScreen({ note, onSave, onBack }) {
           </body>
         </html>
       `;
+
       const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(pdfUri);
-    } catch (error) { Alert.alert('Error', 'PDF Export Failed: ' + error.message); }
+    } catch (error) {
+      Alert.alert('Export Failed', error.message);
+    }
   };
 
-  // ✨ NAYA: AI Action Handler (Abhi ke liye Mock Alert)
+  // ── 2. PROFESSIONAL PDF (pure HTML/CSS) ─────────────────────────────────────
+  const generateProfessionalPDF = async () => {
+    if (!title.trim()) {
+      Alert.alert('Oops!', 'Please enter a Topic Title! 📚');
+      return;
+    }
+    try {
+      const bodyHtml = convertHighlightsToHtml(content);
+      const hasAttachments = doodle || placedItems.length > 0;
+
+      const doodleSection = doodle
+        ? `<div class="attachment-item">
+             <div class="attachment-label">✏️ Doodle / Sketch</div>
+             <img src="${doodle}" class="attachment-img" />
+           </div>`
+        : '';
+
+      const emojiItems = placedItems.filter((i) => i.type === 'emoji');
+      const washiItems = placedItems.filter((i) => i.type === 'washi');
+
+      const stickersSection = emojiItems.length > 0
+          ? `<div class="attachment-item">
+               <div class="attachment-label">🗂️ Stickers Used</div>
+               <div class="sticker-row">
+                 ${emojiItems.map((s) => `<span class="sticker-chip">${s.content}</span>`).join('')}
+               </div>
+             </div>`
+          : '';
+
+      const washiSection = washiItems.length > 0
+          ? `<div class="attachment-item">
+               <div class="attachment-label">🎀 Washi Tape Colors</div>
+               <div class="sticker-row">
+                 ${washiItems.map((w) => `<span class="washi-chip" style="background-color:${w.color};"></span>`).join('')}
+               </div>
+             </div>`
+          : '';
+
+      const attachmentsBlock = hasAttachments
+        ? `<div class="attachments-section">
+             <div class="attachments-heading">📎 Attachments</div>
+             ${doodleSection}
+             ${stickersSection}
+             ${washiSection}
+           </div>`
+        : '';
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              body { font-family: 'Georgia', serif; font-size: 15px; line-height: 1.9; color: #2D2A2E; background: #FFFFFF; padding: 48px 52px; }
+              .doc-header { margin-bottom: 32px; padding-bottom: 16px; border-bottom: 2px solid #EAE6E1; }
+              .folder-tag { font-family: 'Helvetica Neue', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #B8ADAF; margin-bottom: 8px; }
+              h1 { font-size: 28px; font-weight: 800; color: #2D2A2E; border-left: 4px solid #FFB3BA; padding-left: 14px; line-height: 1.25; }
+              .meta-row { margin-top: 10px; font-family: 'Helvetica Neue', sans-serif; font-size: 12px; color: #C8BDBE; letter-spacing: 0.5px; }
+              .body-text { white-space: pre-wrap; word-break: break-word; font-size: 15px; line-height: 1.9; color: #2D2A2E; }
+              mark { background-color: #FDFD96; padding: 0 2px; border-radius: 3px; }
+              .attachments-section { margin-top: 48px; padding-top: 24px; border-top: 1.5px dashed #EAE6E1; }
+              .attachments-heading { font-family: 'Helvetica Neue', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #B8ADAF; margin-bottom: 20px; }
+              .attachment-item { margin-bottom: 22px; }
+              .attachment-label { font-family: 'Helvetica Neue', sans-serif; font-size: 12px; font-weight: 600; color: #8A8788; margin-bottom: 8px; letter-spacing: 0.4px; }
+              .attachment-img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #EAE6E1; display: block; }
+              .sticker-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+              .sticker-chip { font-size: 22px; padding: 4px; background: #FAF8F5; border-radius: 8px; border: 1px solid #EAE6E1; }
+              .washi-chip { display: inline-block; width: 48px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.07); }
+              .watermark { margin-top: 48px; text-align: center; font-family: 'Georgia', serif; font-style: italic; font-size: 12px; color: #D4CFCC; }
+            </style>
+          </head>
+          <body>
+            <div class="doc-header">
+              <div class="folder-tag">${folder || 'General Notes'}</div>
+              <h1>${title}</h1>
+              <div class="meta-row">
+                ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </div>
+            </div>
+            <div class="body-text">${bodyHtml}</div>
+            ${attachmentsBlock}
+            <div class="watermark">Crafted with ✨ Lumina Notes</div>
+          </body>
+        </html>
+      `;
+
+      const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(pdfUri);
+    } catch (error) {
+      Alert.alert('Export Failed', error.message);
+    }
+  };
+
   const handleAiAction = (actionId) => {
     setTimeout(() => {
       Alert.alert('✨ Lumina AI Magic', `The '${actionId}' feature is connecting to Gemini. Coming in the PRO update! 🚀`);
@@ -157,8 +262,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
       
       <View style={styles.toolboxBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
-          
-          {/* ✨ NAYA: AI Spark Button */}
           <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}>
             <Text style={styles.aiBtnText}>✨ AI Spark</Text>
           </TouchableOpacity>
@@ -229,9 +332,35 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </ScrollView>
       </View>
 
-      <TouchableOpacity style={styles.pdfButton} onPress={generatePDF}>
-        <Text style={styles.buttonText}>📤 Export HD PDF</Text>
-      </TouchableOpacity>
+      {/* ── Dual Export Footer ── */}
+      <View style={styles.exportFooter}>
+        <View style={styles.exportFooterHeader}>
+          <View style={styles.exportFooterLine} />
+          <Text style={styles.exportFooterLabel}>Export Note</Text>
+          <View style={styles.exportFooterLine} />
+        </View>
+        <View style={styles.exportBtnRow}>
+          <TouchableOpacity
+            style={[styles.exportBtn, styles.exportBtnAesthetic]}
+            onPress={generateAestheticPDF}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.exportBtnIcon}>🎨</Text>
+            <Text style={styles.exportBtnTitle}>Aesthetic PDF</Text>
+            <Text style={styles.exportBtnSub}>Visual · Stickers intact</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.exportBtn, styles.exportBtnPro]}
+            onPress={generateProfessionalPDF}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.exportBtnIcon}>📄</Text>
+            <Text style={styles.exportBtnTitle}>Professional PDF</Text>
+            <Text style={styles.exportBtnSub}>Text · Long notes</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
 
@@ -244,7 +373,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </View>
       </Modal>
 
-      {/* ✨ NAYA: AI Spark Modal Component */}
       <AiSparkModal 
         visible={showAiModal} 
         onClose={() => setShowAiModal(false)} 
@@ -267,7 +395,6 @@ const styles = StyleSheet.create({
   
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
   
-  // ✨ NAYA: AI Button Styling
   aiBtn: { backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
   aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
 
@@ -298,7 +425,16 @@ const styles = StyleSheet.create({
   doodleImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   removeDoodle: { position: 'absolute', top: 10, right: 10, backgroundColor: '#2D2A2E', width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
   
-  pdfButton: { padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EAE6E1', elevation: 2 },
-  buttonText: { color: '#2D2A2E', fontSize: 16, fontWeight: '700' }
+  // ── Dual Export Footer Styles ──
+  exportFooter: { paddingTop: 10, paddingBottom: 6 },
+  exportFooterHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
+  exportFooterLine: { flex: 1, height: 1, backgroundColor: '#EAE6E1' },
+  exportFooterLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase', color: '#C8BDBE' },
+  exportBtnRow: { flexDirection: 'row', gap: 10 },
+  exportBtn: { flex: 1, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', borderWidth: 1, gap: 3, shadowColor: '#C8B8B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 2 },
+  exportBtnAesthetic: { backgroundColor: '#FFF0F3', borderColor: 'rgba(255,179,186,0.5)' },
+  exportBtnPro: { backgroundColor: '#F4F2FF', borderColor: 'rgba(174,166,230,0.5)' },
+  exportBtnIcon: { fontSize: 22, marginBottom: 2 },
+  exportBtnTitle: { fontSize: 13, fontWeight: '700', color: '#2D2A2E', letterSpacing: 0.2 },
+  exportBtnSub: { fontSize: 10, color: '#B8ADAF', letterSpacing: 0.3, textAlign: 'center' },
 });
-                                  
