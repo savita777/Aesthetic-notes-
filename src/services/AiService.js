@@ -1,5 +1,5 @@
 /**
- * AiService.js — Direct REST API Method
+ * AiService.js — Direct REST API Method (Bulletproof)
  */
 
 // ── APNI ASLI API KEY YAHAN DAALEIN ──────────────────────────────
@@ -44,8 +44,8 @@ export async function generateAiSpark(noteContent, actionType) {
   const systemPrompt = SYSTEM_PROMPTS[actionType] || SYSTEM_PROMPTS.summarize;
   const finalPrompt = `${systemPrompt}\n\n=== USER NOTES ===\n${trimmed}`;
 
-  // ✨ NAYA UPDATE: Model ka naam "gemini-1.5-flash-latest" kar diya hai
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+  // ✨ THE FIX: Switched to the ultra-stable universally supported 'gemini-pro' model
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
     const response = await fetch(url, {
