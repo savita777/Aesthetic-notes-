@@ -1,9 +1,9 @@
 /**
- * AiService.js — Direct REST API Method (Bulletproof)
+ * AiService.js — Direct REST API Method (Clean Version)
  */
 
-// ── APNI ASLI API KEY YAHAN DAALEIN ──────────────────────────────
-const GEMINI_API_KEY = 'AQ.Ab8RN6KAWpSjEBDcRvbB0UjbnCde2PK1937HUUp-e2dUJhm2Sg';
+// ── APNI ASLI GOOGLE API KEY YAHAN DAALEIN (Jo 'AQ' se shuru ho rahi hai) ──
+const GEMINI_API_KEY = 'AQ.Ab8RN6JccxA2YrIG7SrwDWpnxxF3QDN8QubNTCdM4rj5RtREeA';
 
 // ── System Prompts ──────────────────────────────────────────────
 const SYSTEM_PROMPTS = {
@@ -44,8 +44,8 @@ export async function generateAiSpark(noteContent, actionType) {
   const systemPrompt = SYSTEM_PROMPTS[actionType] || SYSTEM_PROMPTS.summarize;
   const finalPrompt = `${systemPrompt}\n\n=== USER NOTES ===\n${trimmed}`;
 
-  // ✨ THE FIX: Switched to the ultra-stable universally supported 'gemini-pro' model
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+  // Sabse latest aur fast model
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
     const response = await fetch(url, {
@@ -77,6 +77,7 @@ export async function generateAiSpark(noteContent, actionType) {
     return text.trim();
 
   } catch (err) {
+    if (err instanceof AiServiceError) throw err;
     throw new AiServiceError('NETWORK_ERROR', `Connection failed: ${err.message}`);
   }
 }
