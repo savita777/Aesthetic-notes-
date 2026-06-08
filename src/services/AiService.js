@@ -16,6 +16,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import 'react-native-url-polyfill/auto';
 
 // ── Replace this with your actual Gemini API key ──────────────────────────────
 const GEMINI_API_KEY = 'AQ.Ab8RN6KAWpSjEBDcRvbB0UjbnCde2PK1937HUUp-e2dUJhm2Sg';
