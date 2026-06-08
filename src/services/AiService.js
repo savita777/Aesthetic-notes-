@@ -1,9 +1,9 @@
 /**
- * AiService.js — Direct REST API Method (Clean Version)
+ * AiService.js — Self-Healing Auto-Discovery Method 🚀
  */
 
-// ── APNI ASLI GOOGLE API KEY YAHAN DAALEIN (Jo 'AQ' se shuru ho rahi hai) ──
-const GEMINI_API_KEY = 'AQ.Ab8RN6JccxA2YrIG7SrwDWpnxxF3QDN8QubNTCdM4rj5RtREeA';
+// ── APNI ASLI GOOGLE API KEY YAHAN DAALEIN ('AQ...' wali) ──
+const GEMINI_API_KEY = 'AQ.Ab8RN6KAWpSjEBDcRvbB0UjbnCde2PK1937HUUp-e2dUJhm2Sg';
 
 // ── System Prompts ──────────────────────────────────────────────
 const SYSTEM_PROMPTS = {
@@ -41,11 +41,41 @@ export async function generateAiSpark(noteContent, actionType) {
     throw new AiServiceError('CONTENT_TOO_SHORT', 'Your note is too short. Write a bit more! ✍️');
   }
 
+  // ── ✨ THE CTO MASTERSTROKE: AUTO-DISCOVERY ENGINE ──
+  // Hum naam guess nahi karenge, seedha Google se active model ki list mangwayenge!
+  let modelName = '';
+  try {
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
+    const listRes = await fetch(listUrl);
+    const listData = await listRes.json();
+
+    if (!listRes.ok) {
+      throw new Error(listData.error?.message || 'Could not fetch models');
+    }
+
+    // Aise models filter karo jo text generate kar sakte hain
+    const models = listData.models?.filter(m => m.supportedGenerationMethods?.includes('generateContent')) || [];
+    
+    // Pehle 'flash' dhoondo, na mile toh 'pro', na mile toh jo bhi pehla available ho!
+    const bestModel = models.find(m => m.name.includes('flash')) || 
+                      models.find(m => m.name.includes('pro')) || 
+                      models[0];
+
+    if (bestModel) {
+      modelName = bestModel.name; // Automatically detect ho gaya (e.g., 'models/gemini-something')
+    } else {
+      throw new Error('Aapki key par koi compatible text model nahi mila!');
+    }
+  } catch (err) {
+    throw new AiServiceError('AUTO_DISCOVERY_FAILED', `Google ne models ki list nahi di: ${err.message}`);
+  }
+
+  // ── Final Generation Request ──
   const systemPrompt = SYSTEM_PROMPTS[actionType] || SYSTEM_PROMPTS.summarize;
   const finalPrompt = `${systemPrompt}\n\n=== USER NOTES ===\n${trimmed}`;
 
-  // Sabse latest aur fast model
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  // Jo model auto-discover hua hai, usey URL mein lagao
+  const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
     const response = await fetch(url, {
@@ -78,7 +108,7 @@ export async function generateAiSpark(noteContent, actionType) {
 
   } catch (err) {
     if (err instanceof AiServiceError) throw err;
-    throw new AiServiceError('NETWORK_ERROR', `Connection failed: ${err.message}`);
+    throw new AiServiceError('NETWORK_ERROR', `Generation failed: ${err.message}`);
   }
 }
 
