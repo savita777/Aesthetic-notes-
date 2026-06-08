@@ -15,8 +15,7 @@
     "react-native-svg": "15.2.0",
     "react-native-view-shot": "3.8.0",
     "expo-splash-screen": "~0.27.4",
-    "expo-file-system": "~17.0.1"
-    "@google/generative-ai": "*",
-    
+    "expo-file-system": "~17.0.1",
+    "@google/generative-ai": "*"
   }
 }
