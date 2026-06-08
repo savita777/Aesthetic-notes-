@@ -9,6 +9,9 @@ import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
 import AiSparkModal from '../components/AiSparkModal';
 
+// ✨ NAYA: AI Service Import Add Kiya (Keval Add Kiya Hai)
+import { generateAiSpark } from '../services/AiService';
+
 const { width, height } = Dimensions.get('window');
 
 export default function NoteScreen({ note, onSave, onBack }) {
@@ -22,6 +25,9 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [placedItems, setPlacedItems] = useState([]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
+
+  // ✨ NAYA: AI Loading State Add Kiya (Keval Add Kiya Hai)
+  const [isAiThinking, setIsAiThinking] = useState(false);
 
   const noteViewShotRef = useRef();
 
@@ -230,10 +236,32 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  const handleAiAction = (actionId) => {
-    setTimeout(() => {
-      Alert.alert('✨ Lumina AI Magic', `The '${actionId}' feature is connecting to Gemini. Coming in the PRO update! 🚀`);
-    }, 500);
+  // ✨ UPDATED: Ab Mock Alert hatakar asli Gemini AI connection logic add kiya hai
+  const handleAiAction = async (actionId) => {
+    setShowAiModal(false); 
+    
+    if (!content || content.trim().length < 20) {
+      Alert.alert('Oops!', 'Please write at least 20 characters so AI has something to read! ✍️');
+      return;
+    }
+
+    setIsAiThinking(true);
+    setContent(prev => prev + '\n\n✨ [Lumina AI is thinking...]');
+
+    try {
+      const result = await generateAiSpark(content, actionId);
+      
+      setContent(prev => {
+        const cleanContent = prev.replace('\n\n✨ [Lumina AI is thinking...]', '');
+        return cleanContent + '\n\n' + '════ ⋆★⋆ ════\n\n' + result + '\n\n════ ⋆★⋆ ════';
+      });
+      
+    } catch (error) {
+      setContent(prev => prev.replace('\n\n✨ [Lumina AI is thinking...]', ''));
+      Alert.alert('AI Error', error.userMessage || error.message);
+    } finally {
+      setIsAiThinking(false);
+    }
   };
 
   return (
