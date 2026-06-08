@@ -1,6 +1,5 @@
 /**
- * AiService.js — Direct REST API Method (Bulletproof for React Native)
- * Google SDK hata diya gaya hai. Ab seedha Native Fetch use hoga.
+ * AiService.js — Direct REST API Method
  */
 
 // ── APNI ASLI API KEY YAHAN DAALEIN ──────────────────────────────
@@ -43,12 +42,10 @@ export async function generateAiSpark(noteContent, actionType) {
   }
 
   const systemPrompt = SYSTEM_PROMPTS[actionType] || SYSTEM_PROMPTS.summarize;
-  
-  // Combine System Instruction and User Notes
   const finalPrompt = `${systemPrompt}\n\n=== USER NOTES ===\n${trimmed}`;
 
-  // Direct Google API URL
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  // ✨ NAYA UPDATE: Model ka naam "gemini-1.5-flash-latest" kar diya hai
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
     const response = await fetch(url, {
@@ -67,12 +64,10 @@ export async function generateAiSpark(noteContent, actionType) {
 
     const data = await response.json();
 
-    // Check if Google sent an error back
     if (!response.ok) {
       throw new Error(data.error?.message || 'Google API rejected the request.');
     }
 
-    // Extract the text
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!text) {
@@ -82,7 +77,6 @@ export async function generateAiSpark(noteContent, actionType) {
     return text.trim();
 
   } catch (err) {
-    // Catch real network errors directly
     throw new AiServiceError('NETWORK_ERROR', `Connection failed: ${err.message}`);
   }
 }
