@@ -18,7 +18,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // ── Replace this with your actual Gemini API key ──────────────────────────────
-const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
+const GEMINI_API_KEY = 'AQ.Ab8RN6KAWpSjEBDcRvbB0UjbnCde2PK1937HUUp-e2dUJhm2Sg';
 
 // ── Model config ──────────────────────────────────────────────────────────────
 const MODEL_NAME = 'gemini-1.5-flash';        // fast, free-tier friendly
@@ -88,7 +88,7 @@ TONE: Clean, academic, elegant. No markdown headers. Plain text only.`,
  */
 export async function generateAiSpark(noteContent, actionType) {
   // ── Guard: API key not set ──
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AQ.Ab8RN6KAWpSjEBDcRvbB0UjbnCde2PK1937HUUp-e2dUJhm2Sg') {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
     throw new AiServiceError(
       'API_KEY_MISSING',
       'Gemini API key is not configured. Open AiService.js and paste your key.'
