@@ -32,15 +32,10 @@ jobs:
       - name: Compile APK
         working-directory: android
         run: ./gradlew assembleRelease
-        
-      - name: Bypass GitHub Quota & Upload APK
-        run: |
-          echo "Uploading APK to reliable server (Litterbox)..."
-          URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@android/app/build/outputs/apk/release/app-release.apk" https://litterbox.catbox.moe/user/api.php)
-          echo ""
-          echo "=========================================================="
-          echo "🎉 BUILD SUCCESSFUL! 🎉"
-          echo "⬇️ COPY THIS LINK AND PASTE IN CHROME TO DOWNLOAD:"
-          echo $URL
-          echo "=========================================================="
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aesthetic-Notes-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
           
