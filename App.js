@@ -76,13 +76,18 @@ export default function App() {
       const { error } = await supabase
         .from('notes')
         .insert([
-          { content: content || "Khali note" } // Sirf content cloud par bhej rahe hain
+          { 
+            title: title || "Untitled",          // Naya: Title bhej rahe hain
+            content: content || "Khali note",    // Purana content waisa hi hai
+            color: color || "#FDF6F5",           // Naya: Color bhej rahe hain
+            folder: folder || "📔 Diary"         // Naya: Folder bhej rahe hain
+          } 
         ]);
 
       if (error) {
         console.log("Cloud Save Error ❌:", error);
       } else {
-        console.log("Cloud par note save ho gaya! ✅☁️");
+        console.log("Pura Note Cloud par save ho gaya! ✅☁️");
       }
     } catch (err) {
       console.log("Network error ❌:", err);
@@ -118,4 +123,4 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background }
 });
-                                   
+            
