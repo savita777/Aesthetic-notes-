@@ -35,11 +35,12 @@ jobs:
         
       - name: Bypass GitHub Quota & Upload APK
         run: |
-          echo "Uploading APK to BashUpload..."
-          curl -k -T android/app/build/outputs/apk/release/app-release.apk https://bashupload.com/AestheticNotes.apk
+          echo "Uploading APK to reliable server (Litterbox)..."
+          URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@android/app/build/outputs/apk/release/app-release.apk" https://litterbox.catbox.moe/user/api.php)
           echo ""
           echo "=========================================================="
           echo "🎉 BUILD SUCCESSFUL! 🎉"
-          echo "⬇️ UPAR JO BASHUPLOAD KA LINK AAYA HAI USKO COPY KARKE CHROME MEIN KHOLEIN"
+          echo "⬇️ COPY THIS LINK AND PASTE IN CHROME TO DOWNLOAD:"
+          echo $URL
           echo "=========================================================="
           
