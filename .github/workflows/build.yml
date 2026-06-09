@@ -35,12 +35,11 @@ jobs:
 
       - name: Bypass GitHub Quota & Upload APK
         run: |
-          echo "Uploading APK to secure temporary server..."
-          URL=$(curl -s -F "file=@android/app/build/outputs/apk/release/app-release.apk" https://file.io)
+          echo "Uploading APK to transfer.sh server..."
+          curl --upload-file android/app/build/outputs/apk/release/app-release.apk https://transfer.sh/AestheticNotes.apk
+          echo ""
           echo "=========================================================="
           echo "🎉 BUILD SUCCESSFUL! 🎉"
-          echo "⬇️ COPY THIS LINK AND PASTE IN CHROME TO DOWNLOAD:"
-          echo $URL | grep -o '"link":"[^"]*' | cut -d'"' -f4
+          echo "⬇️ UPAR JO LINK AAYA HAI (https://transfer.sh/...) USKO COPY KARKE CHROME MEIN KHOLEIN"
           echo "=========================================================="
-          echo "⚠️ NOTE: This link is highly secure and will expire after 1 download."
           
