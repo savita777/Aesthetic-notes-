@@ -32,14 +32,14 @@ jobs:
       - name: Compile APK
         working-directory: android
         run: ./gradlew assembleRelease
-
+        
       - name: Bypass GitHub Quota & Upload APK
         run: |
-          echo "Uploading APK to transfer.sh server..."
-          curl --upload-file android/app/build/outputs/apk/release/app-release.apk https://transfer.sh/AestheticNotes.apk
+          echo "Uploading APK to BashUpload..."
+          curl -T android/app/build/outputs/apk/release/app-release.apk https://bashupload.com/AestheticNotes.apk
           echo ""
           echo "=========================================================="
           echo "🎉 BUILD SUCCESSFUL! 🎉"
-          echo "⬇️ UPAR JO LINK AAYA HAI (https://transfer.sh/...) USKO COPY KARKE CHROME MEIN KHOLEIN"
+          echo "⬇️ UPAR JO BASHUPLOAD KA LINK AAYA HAI USKO COPY KARKE CHROME MEIN KHOLEIN"
           echo "=========================================================="
           
