@@ -9,8 +9,8 @@ import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
 import AiSparkModal from '../components/AiSparkModal';
 
-// ✨ NAYA: AI Service Import Add Kiya (Keval Add Kiya Hai)
-import { generateAiSpark } from '../services/AiService';
+// ☁️ NAYA: Supabase import kiya agent ko bulane ke liye
+import { supabase } from '../../supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,7 +26,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const [placedItems, setPlacedItems] = useState([]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
 
-  // ✨ NAYA: AI Loading State Add Kiya (Keval Add Kiya Hai)
   const [isAiThinking, setIsAiThinking] = useState(false);
 
   const noteViewShotRef = useRef();
@@ -236,7 +235,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // ✨ UPDATED: Ab Mock Alert hatakar asli Gemini AI connection logic add kiya hai
+  // 🚀 UPDATED: Secure Cloud Agent Connection!
   const handleAiAction = async (actionId) => {
     setShowAiModal(false); 
     
@@ -249,7 +248,20 @@ export default function NoteScreen({ note, onSave, onBack }) {
     setContent(prev => prev + '\n\n✨ [Lumina AI is thinking...]');
 
     try {
-      const result = await generateAiSpark(content, actionId);
+      // 1. Ek badiya sa prompt banaya user note aur action ko milakar
+      const smartPrompt = `Act as an expert study assistant. The user wants you to perform this action: "${actionId}". \n\nHere are the user's notes:\n\n${content}\n\nPlease provide a helpful, clean, and aesthetic response.`;
+
+      // 2. Secret Agent (Cloud Function) ko bulaya
+      const { data, error } = await supabase.functions.invoke('ask-gemini', {
+        body: { prompt: smartPrompt }
+      });
+
+      if (error) {
+        throw new Error("Could not connect to AI Cloud: " + error.message);
+      }
+      
+      // 3. Agent ka jawab screen par update kiya
+      const result = data.answer;
       
       setContent(prev => {
         const cleanContent = prev.replace('\n\n✨ [Lumina AI is thinking...]', '');
@@ -258,7 +270,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
       
     } catch (error) {
       setContent(prev => prev.replace('\n\n✨ [Lumina AI is thinking...]', ''));
-      Alert.alert('AI Error', error.userMessage || error.message);
+      Alert.alert('AI Error', error.message);
     } finally {
       setIsAiThinking(false);
     }
