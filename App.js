@@ -5,7 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 // ☁️ Cloud aur Auth yahan import kiya
 import { supabase } from './supabase'; 
-import AuthScreen from './AuthScreen'; // 🔒 NAYA: OTP Login Screen
+import AuthScreen from './AuthScreen'; // 🔒 NAYA: Login Screen
 
 import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
@@ -111,6 +111,7 @@ export default function App() {
     }
 
     try {
+      // ☁️ THE MAGIC: Cloud par bhejne ka code (UPDATED with user_id)
       const { error } = await supabase
         .from('notes')
         .insert([
@@ -118,7 +119,8 @@ export default function App() {
             title: title || "Untitled",
             content: content || "Khali note",
             color: color || "#FDF6F5",
-            folder: folder || "📔 Diary"
+            folder: folder || "📔 Diary",
+            user_id: session?.user?.id // 👈 NAYI LINE: Ye batayegi ki note kis user ka hai!
           } 
         ]);
 
@@ -172,7 +174,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   
-  // Splash Screen Styles (Claude)
+  // Splash Screen Styles
   splashContainer: {
     flex: 1,
     backgroundColor: CLAUDE_COLORS.background,
@@ -211,4 +213,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-        
+    
