@@ -61,19 +61,42 @@ export default function App() {
     }, 3000); 
   }, []);
 
-  // 📔 PURANA: Storage se notes load karna
+  // 🚀 THE ULTIMATE MAGIC: Jab Session aaye, tabhi Notes Lao!
   useEffect(() => {
-    loadNotes();
-  }, []);
+    if (session?.user?.id) {
+      // User andar aagaya -> Uske notes Cloud se lao
+      fetchUserNotes(session.user.id);
+    } else {
+      // User ne logout kiya / Naya banda hai -> Notes hata do screen se
+      setNotes([]); 
+    }
+  }, [session]);
 
-  const loadNotes = async () => {
+  // ☁️ NAYA FUNCTION: Cloud se sirf "Is User" ke notes fetch karne ke liye
+  const fetchUserNotes = async (userId) => {
     try {
-      const savedNotes = await AsyncStorage.getItem('@aesthetic_notes');
-      if (savedNotes !== null) {
-        setNotes(JSON.parse(savedNotes));
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('user_id', userId); // 👈 YAHI HAI WO FILTER JO DUSRO KE NOTES ROKEGA!
+
+      if (error) {
+        console.log("Cloud Fetch Error ❌:", error);
+        // Agar internet nahi chal raha toh Phone ke purane notes dikha do
+        const savedNotes = await AsyncStorage.getItem('@aesthetic_notes');
+        if (savedNotes !== null) setNotes(JSON.parse(savedNotes));
+        return;
+      }
+
+      if (data) {
+        console.log("Cloud se User ke apne notes aagaye! ✅☁️");
+        const reversedData = [...data].reverse(); // Naye notes sabse upar dikhane ke liye
+        setNotes(reversedData);
+        // Phone mein bhi backup save karlo
+        AsyncStorage.setItem('@aesthetic_notes', JSON.stringify(reversedData));
       }
     } catch (e) {
-      console.log("Notes load karne mein error aaya:", e);
+      console.log("Network error ❌:", e);
     }
   };
 
@@ -98,20 +121,22 @@ export default function App() {
     let updatedNotes = [...notes];
     const aestheticDate = getAestheticDate();
     
+    // Naya Note jo app mein dikhega
+    const newNote = {
+      id: Date.now().toString(),
+      title, content, color, folder: folder || '📔 Diary', doodle, placedItems, date: aestheticDate
+    };
+
     if (selectedNote) {
       updatedNotes = notes.map(n => n.id === selectedNote.id ? { 
         ...n, title, content, color, folder, doodle, placedItems, date: aestheticDate 
       } : n);
     } else {
-      const newNote = {
-        id: Date.now().toString(),
-        title, content, color, folder: folder || '📔 Diary', doodle, placedItems, date: aestheticDate
-      };
       updatedNotes.unshift(newNote); 
     }
 
     try {
-      // ☁️ THE MAGIC: Cloud par bhejne ka code (UPDATED with user_id)
+      // ☁️ Cloud par User ki ID ke sath Save karna
       const { error } = await supabase
         .from('notes')
         .insert([
@@ -120,7 +145,7 @@ export default function App() {
             content: content || "Khali note",
             color: color || "#FDF6F5",
             folder: folder || "📔 Diary",
-            user_id: session?.user?.id // 👈 NAYI LINE: Ye batayegi ki note kis user ka hai!
+            user_id: session?.user?.id // 👈 Note kis user ka hai
           } 
         ]);
 
@@ -128,6 +153,8 @@ export default function App() {
         console.log("Cloud Save Error ❌:", error);
       } else {
         console.log("Pura Note Cloud par save ho gaya! ✅☁️");
+        // Save hone ke baad wapas naye notes fetch kar lo taaki sab sync rahe
+        fetchUserNotes(session.user.id);
       }
     } catch (err) {
       console.log("Network error ❌:", err);
@@ -143,7 +170,7 @@ export default function App() {
     return <SplashLoader />;
   }
 
-  // 🛑 GATEKEEPER 2: Agar User login nahi hai, toh OTP screen par bhejo
+  // 🛑 GATEKEEPER 2: Agar User login nahi hai, toh OTP/Password screen par bhejo
   if (!session) {
     return <AuthScreen />;
   }
@@ -213,4 +240,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-    
+                                
