@@ -261,8 +261,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
       }
       
       // 3. Agent ka jawab screen par update kiya
-      const result = data.answer;
-      
+      const result = data?.reply || data?.text || data?.answer || data?.response || "Lumina AI is speechless!";
+       
       setContent(prev => {
         const cleanContent = prev.replace('\n\n✨ [Lumina AI is thinking...]', '');
         return cleanContent + '\n\n' + '════ ⋆★⋆ ════\n\n' + result + '\n\n════ ⋆★⋆ ════';
