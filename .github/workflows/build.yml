@@ -33,9 +33,15 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Aesthetic-Notes-APK
-          path: android/app/build/outputs/apk/release/app-release.apk
+      - name: Save APK directly to GitHub Repo
+        run: |
+          echo "Bypassing Artifact Quota! Saving APK directly to repo..."
+          mkdir -p Ready-APK
+          cp android/app/build/outputs/apk/release/app-release.apk Ready-APK/LuminaNotes.apk
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add Ready-APK/LuminaNotes.apk
+          git commit -m "🚀 Add latest APK build [skip ci]"
+          git push
+          
           
