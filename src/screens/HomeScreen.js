@@ -2,21 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '../theme/colors';
 
-// 🔥 NAYA: Daily Streak Widget Import Kiya
 import DailyStreakWidget from '../components/DailyStreakWidget';
-
-// 📸 NAYA: Studygram Share Modal Import Kiya
 import StudygramShareModal from '../components/StudygramShareModal';
 
-export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
+// 🧪 NAYA: onTestEditor prop add kiya
+export default function HomeScreen({ notes, onSelectNote, onCreateNew, onTestEditor }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
-  // 📚 Naye Study Subjects
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
-  // 📸 NAYA: Share Modal kholne ke liye state
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // Sirf chune hue subject ke notes dikhao
   const filteredNotes = activeSubject === 'All Notes' ? notes : notes.filter(n => n.folder === activeSubject);
 
   const renderNotebookCard = ({ item }) => (
@@ -24,7 +19,6 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
       style={[styles.notebookCard, { backgroundColor: item.color || '#FDF6F5' }]} 
       onPress={() => onSelectNote(item)}
     >
-      {/* Notebook ka Binder (Spiral effect) */}
       <View style={styles.binderStrip}>
         <View style={styles.binderHole} />
         <View style={styles.binderHole} />
@@ -48,25 +42,30 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
   return (
     <View style={styles.container}>
-      {/* 🌸 Header with Share Button */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
           <Text style={styles.headerTitle}>My Study Space</Text>
         </View>
 
-        {/* 📸 NAYA: Share Button */}
         <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
           <Text style={styles.shareIconText}>📸 Share</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 🔥 NAYA: Daily Streak Widget Yahan Add Hua Hai */}
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
 
-      {/* Subjects Scroll Bar */}
+      {/* 🧪 NAYA: TEST BUTTON YAHAN HAI */}
+      <TouchableOpacity 
+        style={styles.testEditorBtn} 
+        onPress={onTestEditor}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.testEditorBtnText}>🧪 Test A4 Pages Engine</Text>
+      </TouchableOpacity>
+
       <View style={styles.subjectScrollBox}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 15 }}>
           {allSubjects.map((subject, i) => (
@@ -100,12 +99,10 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
         />
       )}
 
-      {/* Modern Floating Action Button */}
       <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
         <Text style={styles.fabText}>✏️</Text>
       </TouchableOpacity>
 
-      {/* 📸 NAYA: The Modal Component */}
       <StudygramShareModal 
         visible={showShareModal} 
         onClose={() => setShowShareModal(false)} 
@@ -115,93 +112,43 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF8F5', paddingTop: 60 }, // Aesthetic off-white bg
+  container: { flex: 1, backgroundColor: '#FAF8F5', paddingTop: 60 }, 
   
-  // 📸 Updated Header Layout
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: 20, 
-    marginBottom: 10 
-  }, 
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 }, 
   greetingText: { fontSize: 16, color: '#A09E9F', fontWeight: '600', marginBottom: 5 },
   headerTitle: { fontSize: 34, fontWeight: '800', color: '#2D2A2E', letterSpacing: -0.5 },
   
-  // 📸 NAYA: Share Button Styles
-  shareIconBtn: {
-    backgroundColor: '#FFB3BA', // Soft Pink
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#FFB3BA',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  shareIconText: {
-    color: '#2D2A2E',
-    fontWeight: '700',
-    fontSize: 12,
-  },
+  shareIconBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, elevation: 2, shadowColor: '#FFB3BA', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 5 },
+  shareIconText: { color: '#2D2A2E', fontWeight: '700', fontSize: 12 },
 
-  // 🔥 NAYA: Widget ko set karne ke liye styling
-  widgetContainer: {
+  widgetContainer: { marginBottom: 15, width: '100%', alignItems: 'center' },
+
+  // 🧪 NAYA: Test Button Styling
+  testEditorBtn: {
+    backgroundColor: '#C1E1C1', // Light Mint Green
+    marginHorizontal: 20,
     marginBottom: 20,
-    width: '100%',
-    alignItems: 'center'
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#A8C9A8',
   },
+  testEditorBtnText: { color: '#2D2A2E', fontWeight: '800', fontSize: 15 },
 
   subjectScrollBox: { marginBottom: 20 },
-  subjectBtn: { 
-    paddingVertical: 10, 
-    paddingHorizontal: 18, 
-    backgroundColor: '#FFFFFF', 
-    borderRadius: 25, 
-    marginRight: 12, 
-    borderWidth: 1,
-    borderColor: '#EAE6E1',
-    elevation: 0 // Flat aesthetic design
-  },
-  subjectBtnActive: { backgroundColor: '#2D2A2E', borderColor: '#2D2A2E' }, // Dark minimal active state
+  subjectBtn: { paddingVertical: 10, paddingHorizontal: 18, backgroundColor: '#FFFFFF', borderRadius: 25, marginRight: 12, borderWidth: 1, borderColor: '#EAE6E1', elevation: 0 },
+  subjectBtnActive: { backgroundColor: '#2D2A2E', borderColor: '#2D2A2E' }, 
   subjectText: { color: '#8A8788', fontWeight: '600', fontSize: 14 },
   subjectTextActive: { color: '#FFF' },
   
   listContainer: { paddingHorizontal: 10, paddingBottom: 120 },
   
-  // 📓 The Notebook Card Design
-  notebookCard: { 
-    flex: 0.5, 
-    margin: 8, 
-    borderRadius: 16, 
-    minHeight: 180, 
-    elevation: 4, 
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    flexDirection: 'row', // Binder side-by-side laane ke liye
-    overflow: 'hidden'
-  },
-  binderStrip: {
-    width: 20,
-    backgroundColor: '#rgba(255,255,255,0.3)',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderColor: '#rgba(0,0,0,0.05)',
-  },
-  binderHole: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FAF8F5' }, // Background color to show 'hole'
+  notebookCard: { flex: 0.5, margin: 8, borderRadius: 16, minHeight: 180, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, flexDirection: 'row', overflow: 'hidden' },
+  binderStrip: { width: 20, backgroundColor: '#rgba(255,255,255,0.3)', justifyContent: 'space-evenly', alignItems: 'center', borderRightWidth: 1, borderColor: '#rgba(0,0,0,0.05)' },
+  binderHole: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FAF8F5' }, 
   notebookContent: { flex: 1, padding: 12, paddingLeft: 8 },
-  notebookLabel: { 
-    alignSelf: 'flex-start', 
-    backgroundColor: '#rgba(255,255,255,0.6)', 
-    paddingHorizontal: 8, 
-    paddingVertical: 4, 
-    borderRadius: 8, 
-    marginBottom: 8 
-  },
+  notebookLabel: { alignSelf: 'flex-start', backgroundColor: '#rgba(255,255,255,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginBottom: 8 },
   labelSubject: { fontSize: 10, color: '#555', fontWeight: '800', textTransform: 'uppercase' },
   cardTitle: { fontSize: 18, fontWeight: '700', color: '#2D2A2E', marginBottom: 8, lineHeight: 22 },
   cardSnippet: { fontSize: 13, color: '#666', flex: 1, lineHeight: 18 },
@@ -213,22 +160,6 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 18, color: '#2D2A2E', fontWeight: '700', textAlign: 'center', marginBottom: 5 },
   emptySubText: { fontSize: 14, color: '#A09E9F', textAlign: 'center', lineHeight: 20 },
   
-  fab: { 
-    position: 'absolute', 
-    right: 25, 
-    bottom: 40, 
-    backgroundColor: '#2D2A2E', 
-    width: 65, 
-    height: 65, 
-    borderRadius: 20, // Squircle shape aesthetic
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    elevation: 6,
-    shadowColor: '#2D2A2E',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
+  fab: { position: 'absolute', right: 25, bottom: 40, backgroundColor: '#2D2A2E', width: 65, height: 65, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 8 },
   fabText: { fontSize: 26, marginLeft: 3 }
 });
-  
