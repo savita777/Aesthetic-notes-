@@ -580,4 +580,4 @@ const styles = StyleSheet.create({
   toolbarRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    ga
+    
