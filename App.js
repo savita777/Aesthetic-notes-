@@ -8,8 +8,6 @@ import AuthScreen from './AuthScreen';
 
 import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
-// 🧪 NAYA: Experimental A4 Editor Import
-import PaginatedEditor from './src/components/PaginatedEditor';
 import { Colors } from './src/theme/colors';
 
 SplashScreen.preventAutoHideAsync();
@@ -158,7 +156,7 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  // ✅ 🚀 NAYA: Navigation Router Updated
+  // ✅ 🚀 CLEAN & FULLY MERGED NAVIGATION
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
@@ -168,11 +166,7 @@ export default function App() {
           notes={notes}
           onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
           onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
-          onTestEditor={() => setCurrentScreen('test_editor')} // 👈 NAYA: Button link
         />
-      ) : currentScreen === 'test_editor' ? (
-        // 🧪 NAYA: A4 Engine Test Screen
-        <PaginatedEditor onBack={() => setCurrentScreen('home')} />
       ) : (
         <NoteScreen 
           note={selectedNote}
@@ -192,4 +186,4 @@ const styles = StyleSheet.create({
   splashBrandName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 28, fontWeight: '700', color: '#1A1D23', letterSpacing: 0.5, marginBottom: 24 },
   splashSpinner: { marginTop: 4 },
 });
-    
+                                                  
