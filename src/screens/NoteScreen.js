@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal } from 'react-native'; 
+// ☁️ NAYA: AppState import kiya gaya hai background track karne ke liye
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal, AppState } from 'react-native'; 
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
+// ☁️ NAYA: AsyncStorage import kiya data ko phone memory mein bachane ke liye
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { Colors } from '../theme/colors';
 import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
 import AiSparkModal from '../components/AiSparkModal';
 
-// ☁️ NAYA: Supabase import kiya agent ko bulane ke liye
+// ☁️ Supabase import kiya agent ko bulane ke liye
 import { supabase } from '../../supabase';
 
 const { width, height } = Dimensions.get('window');
@@ -29,10 +33,14 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const [isAiThinking, setIsAiThinking] = useState(false);
 
   const noteViewShotRef = useRef();
+  
+  // 🕒 NAYA: Timer reference for Auto-Save
+  const autoSaveTimer = useRef(null);
 
   const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
   const washiColors = ['#FFD1DC', '#FDFD96', '#C1E1C1', '#AEC6CF', '#E6E6FA']; 
 
+  // 🔄 NAYA: Load Existing Note OR Restore Draft (Wapas laane wala logic)
   useEffect(() => {
     if (note) {
       setTitle(note.title); 
@@ -41,8 +49,60 @@ export default function NoteScreen({ note, onSave, onBack }) {
       setFolder(note.folder || '');
       setDoodle(note.doodle || null);
       setPlacedItems(note.placedItems || []);
+    } else {
+      // Agar naya note khula hai, toh check karo kya koi purana Draft pada hai?
+      const loadDraft = async () => {
+        try {
+          const savedDraft = await AsyncStorage.getItem('@lumina_draft');
+          if (savedDraft) {
+            const parsedDraft = JSON.parse(savedDraft);
+            setTitle(parsedDraft.title || '');
+            setContent(parsedDraft.content || '');
+            if (parsedDraft.folder) setFolder(parsedDraft.folder);
+            if (parsedDraft.noteColor) setNoteColor(parsedDraft.noteColor);
+            if (parsedDraft.doodle) setDoodle(parsedDraft.doodle);
+            if (parsedDraft.placedItems) setPlacedItems(parsedDraft.placedItems);
+            console.log("✅ Purana Data (Draft) Wapas Aa Gaya!");
+          }
+        } catch (error) {
+          console.log("Draft load error", error);
+        }
+      };
+      loadDraft();
     }
   }, [note]);
+
+  // 💾 NAYA: Draft Save Karne ka function
+  const saveDraftLocally = async () => {
+    try {
+      const draftData = { title, content, folder, noteColor, doodle, placedItems, timestamp: Date.now() };
+      await AsyncStorage.setItem('@lumina_draft', JSON.stringify(draftData));
+    } catch (error) {
+      console.error("Auto-save fail ho gaya:", error);
+    }
+  };
+
+  // 🔄 NAYA: DEBOUNCE LOGIC (5 sec baad save)
+  useEffect(() => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    
+    autoSaveTimer.current = setTimeout(() => {
+      if (title || content) saveDraftLocally();
+    }, 5000);
+
+    return () => clearTimeout(autoSaveTimer.current);
+  }, [title, content, folder, noteColor, doodle, placedItems]);
+
+  // 🚨 NAYA: APP-STATE LOGIC (Minimize hone par save)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        if (title || content) saveDraftLocally();
+      }
+    });
+    return () => subscription.remove();
+  }, [title, content, folder, noteColor, doodle, placedItems]);
+
 
   const addPlacedItem = (type, contentOrColor) => {
     const newItem = {
@@ -235,7 +295,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // 🚀 UPDATED: Secure Cloud Agent Connection!
+  // Secure Cloud Agent Connection!
   const handleAiAction = async (actionId) => {
     setShowAiModal(false); 
     
@@ -248,10 +308,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
     setContent(prev => prev + '\n\n✨ [Lumina AI is thinking...]');
 
     try {
-      // 1. Ek badiya sa prompt banaya user note aur action ko milakar
       const smartPrompt = `Act as an expert study assistant. The user wants you to perform this action: "${actionId}". \n\nHere are the user's notes:\n\n${content}\n\nPlease provide a helpful, clean, and aesthetic response.`;
 
-      // 2. Secret Agent (Cloud Function) ko bulaya
       const { data, error } = await supabase.functions.invoke('ask-gemini', {
         body: { prompt: smartPrompt }
       });
@@ -260,7 +318,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
         throw new Error("Could not connect to AI Cloud: " + error.message);
       }
       
-      // 3. Agent ka jawab screen par update kiya
       const result = data?.reply || data?.text || data?.answer || data?.response || "Lumina AI is speechless!";
        
       setContent(prev => {
@@ -280,7 +337,14 @@ export default function NoteScreen({ note, onSave, onBack }) {
     <View style={styles.container}>
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.saveBtn} onPress={() => onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems)}>
+        
+        {/* 🚀 NAYA: Jab Save dabaye, toh purana draft hata de */}
+        <TouchableOpacity 
+          style={styles.saveBtn} 
+          onPress={async () => {
+            await AsyncStorage.removeItem('@lumina_draft'); // Draft Clear
+            onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems);
+          }}>
           <Text style={styles.saveBtnText}>Save Note</Text>
         </TouchableOpacity>
       </View>
@@ -372,7 +436,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </ScrollView>
       </View>
 
-      {/* ── Dual Export Footer ── */}
       <View style={styles.exportFooter}>
         <View style={styles.exportFooterHeader}>
           <View style={styles.exportFooterLine} />
@@ -403,6 +466,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
       </View>
 
       <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
+
+      <Modal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
 
       <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
