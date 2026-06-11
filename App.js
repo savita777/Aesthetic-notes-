@@ -3,17 +3,17 @@ import { SafeAreaView, StatusBar, StyleSheet, View, ActivityIndicator, Text, Pla
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen'; 
 
-// ☁️ Cloud aur Auth yahan import kiya
 import { supabase } from './supabase'; 
-import AuthScreen from './AuthScreen'; // 🔒 NAYA: Login Screen
+import AuthScreen from './AuthScreen'; 
 
 import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
+// 🧪 NAYA: Experimental A4 Editor Import
+import PaginatedEditor from './src/components/PaginatedEditor';
 import { Colors } from './src/theme/colors';
 
 SplashScreen.preventAutoHideAsync();
 
-// --- 🎨 NAYA: Claude ki Premium Splash Screen UI ---
 const CLAUDE_COLORS = { background: '#F8F9FA', accent: '#4A90E2' };
 
 function SplashLoader() {
@@ -27,19 +27,15 @@ function SplashLoader() {
     </View>
   );
 }
-// --------------------------------------------------
 
 export default function App() {
-  // 🔒 NAYA: Auth Session Check karne ke liye State
   const [session, setSession] = useState(null);
   const [initializing, setInitializing] = useState(true);
 
-  // 📔 PURANA: Notes ki State
   const [notes, setNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('home'); 
   const [selectedNote, setSelectedNote] = useState(null);
 
-  // 🔒 NAYA: App khulte hi Login Check Karega
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
@@ -54,35 +50,29 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ⏱️ PURANA: Expo Splash Screen Timer
   useEffect(() => {
     setTimeout(async () => {
       await SplashScreen.hideAsync(); 
     }, 3000); 
   }, []);
 
-  // 🚀 THE ULTIMATE MAGIC: Jab Session aaye, tabhi Notes Lao!
   useEffect(() => {
     if (session?.user?.id) {
-      // User andar aagaya -> Uske notes Cloud se lao
       fetchUserNotes(session.user.id);
     } else {
-      // User ne logout kiya / Naya banda hai -> Notes hata do screen se
       setNotes([]); 
     }
   }, [session]);
 
-  // ☁️ NAYA FUNCTION: Cloud se sirf "Is User" ke notes fetch karne ke liye
   const fetchUserNotes = async (userId) => {
     try {
       const { data, error } = await supabase
         .from('notes')
         .select('*')
-        .eq('user_id', userId); // 👈 YAHI HAI WO FILTER JO DUSRO KE NOTES ROKEGA!
+        .eq('user_id', userId); 
 
       if (error) {
         console.log("Cloud Fetch Error ❌:", error);
-        // Agar internet nahi chal raha toh Phone ke purane notes dikha do
         const savedNotes = await AsyncStorage.getItem('@aesthetic_notes');
         if (savedNotes !== null) setNotes(JSON.parse(savedNotes));
         return;
@@ -90,9 +80,8 @@ export default function App() {
 
       if (data) {
         console.log("Cloud se User ke apne notes aagaye! ✅☁️");
-        const reversedData = [...data].reverse(); // Naye notes sabse upar dikhane ke liye
+        const reversedData = [...data].reverse(); 
         setNotes(reversedData);
-        // Phone mein bhi backup save karlo
         AsyncStorage.setItem('@aesthetic_notes', JSON.stringify(reversedData));
       }
     } catch (e) {
@@ -116,12 +105,10 @@ export default function App() {
     return `${dateStr} 🎀 - ${timeStr}`;
   };
 
-  // ☁️ PURANA: Note Save aur Cloud Sync Logic
   const handleSaveNote = async (title, content, color, folder, doodle, placedItems) => {
     let updatedNotes = [...notes];
     const aestheticDate = getAestheticDate();
     
-    // Naya Note jo app mein dikhega
     const newNote = {
       id: Date.now().toString(),
       title, content, color, folder: folder || '📔 Diary', doodle, placedItems, date: aestheticDate
@@ -136,7 +123,6 @@ export default function App() {
     }
 
     try {
-      // ☁️ Cloud par User ki ID ke sath Save karna
       const { error } = await supabase
         .from('notes')
         .insert([
@@ -145,7 +131,7 @@ export default function App() {
             content: content || "Khali note",
             color: color || "#FDF6F5",
             folder: folder || "📔 Diary",
-            user_id: session?.user?.id // 👈 Note kis user ka hai
+            user_id: session?.user?.id 
           } 
         ]);
 
@@ -153,7 +139,6 @@ export default function App() {
         console.log("Cloud Save Error ❌:", error);
       } else {
         console.log("Pura Note Cloud par save ho gaya! ✅☁️");
-        // Save hone ke baad wapas naye notes fetch kar lo taaki sab sync rahe
         fetchUserNotes(session.user.id);
       }
     } catch (err) {
@@ -165,17 +150,15 @@ export default function App() {
     setSelectedNote(null);
   };
 
-  // 🛑 GATEKEEPER 1: Jab tak check ho raha hai, Loading (Splash) dikhao
   if (initializing) {
     return <SplashLoader />;
   }
 
-  // 🛑 GATEKEEPER 2: Agar User login nahi hai, toh OTP/Password screen par bhejo
   if (!session) {
     return <AuthScreen />;
   }
 
-  // ✅ GATE OPEN: Agar sab sahi hai, toh AAPKI PURANI MAIN APP dikhao
+  // ✅ 🚀 NAYA: Navigation Router Updated
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
@@ -185,7 +168,11 @@ export default function App() {
           notes={notes}
           onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
           onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
+          onTestEditor={() => setCurrentScreen('test_editor')} // 👈 NAYA: Button link
         />
+      ) : currentScreen === 'test_editor' ? (
+        // 🧪 NAYA: A4 Engine Test Screen
+        <PaginatedEditor onBack={() => setCurrentScreen('home')} />
       ) : (
         <NoteScreen 
           note={selectedNote}
@@ -197,47 +184,12 @@ export default function App() {
   );
 }
 
-// 🎨 Styles mein purana aur naya dono merge kar diya
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  
-  // Splash Screen Styles
-  splashContainer: {
-    flex: 1,
-    backgroundColor: CLAUDE_COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  splashLogoMark: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: CLAUDE_COLORS.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: CLAUDE_COLORS.accent,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  splashLogoInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-  },
-  splashBrandName: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1D23',
-    letterSpacing: 0.5,
-    marginBottom: 24,
-  },
-  splashSpinner: {
-    marginTop: 4,
-  },
+  splashContainer: { flex: 1, backgroundColor: CLAUDE_COLORS.background, alignItems: 'center', justifyContent: 'center' },
+  splashLogoMark: { width: 56, height: 56, borderRadius: 18, backgroundColor: CLAUDE_COLORS.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 16, shadowColor: CLAUDE_COLORS.accent, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 8 },
+  splashLogoInner: { width: 24, height: 24, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.88)' },
+  splashBrandName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 28, fontWeight: '700', color: '#1A1D23', letterSpacing: 0.5, marginBottom: 24 },
+  splashSpinner: { marginTop: 4 },
 });
-                                
+    
