@@ -580,4 +580,101 @@ const styles = StyleSheet.create({
   toolbarRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    
+    gaap: 12,
+  },
+  pageCountLabel: {
+    fontSize: 11,
+    color: '#A89E99',
+    letterSpacing: 0.5,
+  },
+  addPageBtn: {
+    backgroundColor: '#FFB3BA',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    shadowColor: '#FFB3BA',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  addPageBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2D2A2E',
+    letterSpacing: 0.3,
+  },
+
+  // ── List ──
+  listContent: {
+    paddingTop: 28,
+    paddingBottom: 80,
+    alignItems: 'center',
+  },
+  pageSeparator: {
+    height: 24,          // visible gap between pages — simulates physical paper gap
+    backgroundColor: '#EAE6E1',
+  },
+
+  // ── A4 Page ──
+  page: {
+    width: PAGE_W,
+    minHeight: PAGE_H,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+    borderWidth: 1.5,
+    // Shadow — gives pages a lifted, paper-like feel
+    shadowColor: '#5A4A42',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+    paddingHorizontal: PAGE_PAD_V,
+    paddingVertical: PAGE_PAD_H,
+  },
+
+  // ── Ruled lines ──
+  ruledLine: {
+    position: 'absolute',
+    left: PAGE_PAD_V,
+    right: PAGE_PAD_V,
+    height: 1,
+    backgroundColor: '#F0EDE8',
+  },
+
+  // ── TextInput ──
+  textInput: {
+    flex: 1,
+    minHeight: TEXT_AREA_H,
+    fontSize: FONT_SIZE,
+    lineHeight: LINE_HEIGHT,
+    color: '#2D2A2E',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    textAlignVertical: 'top',
+    padding: 0,               // zero out default RN padding
+    margin: 0,
+    letterSpacing: 0.2,
+    zIndex: 1,                // sit above ruled lines
+  },
+
+  // ── Page footer ──
+  pageFooter: {
+    alignItems: 'center',
+    paddingTop: 8,
+    gap: 6,
+  },
+  pageFooterLine: {
+    width: 40,
+    height: 1,
+    backgroundColor: '#EAE6E1',
+  },
+  pageNumber: {
+    fontSize: 10,
+    color: '#C8BDBE',
+    letterSpacing: 1.5,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontStyle: 'italic',
+  },
+});
+          
