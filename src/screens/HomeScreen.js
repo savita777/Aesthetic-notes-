@@ -5,8 +5,8 @@ import { Colors } from '../theme/colors';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
 
-// 🧪 NAYA: onTestEditor prop add kiya
-export default function HomeScreen({ notes, onSelectNote, onCreateNew, onTestEditor }) {
+// 🧪 NAYA: onTestEditor prop ab use nahi ho raha toh uski zaroorat nahi
+export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
@@ -56,15 +56,6 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onTestEdi
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
-
-      {/* 🧪 NAYA: TEST BUTTON YAHAN HAI */}
-      <TouchableOpacity 
-        style={styles.testEditorBtn} 
-        onPress={onTestEditor}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.testEditorBtnText}>🧪 Test A4 Pages Engine</Text>
-      </TouchableOpacity>
 
       <View style={styles.subjectScrollBox}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 15 }}>
@@ -123,19 +114,6 @@ const styles = StyleSheet.create({
 
   widgetContainer: { marginBottom: 15, width: '100%', alignItems: 'center' },
 
-  // 🧪 NAYA: Test Button Styling
-  testEditorBtn: {
-    backgroundColor: '#C1E1C1', // Light Mint Green
-    marginHorizontal: 20,
-    marginBottom: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#A8C9A8',
-  },
-  testEditorBtnText: { color: '#2D2A2E', fontWeight: '800', fontSize: 15 },
-
   subjectScrollBox: { marginBottom: 20 },
   subjectBtn: { paddingVertical: 10, paddingHorizontal: 18, backgroundColor: '#FFFFFF', borderRadius: 25, marginRight: 12, borderWidth: 1, borderColor: '#EAE6E1', elevation: 0 },
   subjectBtnActive: { backgroundColor: '#2D2A2E', borderColor: '#2D2A2E' }, 
@@ -163,3 +141,4 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', right: 25, bottom: 40, backgroundColor: '#2D2A2E', width: 65, height: 65, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 8 },
   fabText: { fontSize: 26, marginLeft: 3 }
 });
+  
