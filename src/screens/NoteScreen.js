@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-// ☁️ NAYA: AppState import kiya gaya hai background track karne ke liye
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal, AppState } from 'react-native'; 
+// ☁️ NAYA: KeyboardAvoidingView aur Platform import kiya gaya hai
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal, AppState, KeyboardAvoidingView, Platform } from 'react-native'; 
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
-// ☁️ NAYA: AsyncStorage import kiya data ko phone memory mein bachane ke liye
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Colors } from '../theme/colors';
@@ -13,7 +12,6 @@ import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
 import AiSparkModal from '../components/AiSparkModal';
 
-// ☁️ Supabase import kiya agent ko bulane ke liye
 import { supabase } from '../../supabase';
 
 const { width, height } = Dimensions.get('window');
@@ -34,13 +32,12 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
   const noteViewShotRef = useRef();
   
-  // 🕒 NAYA: Timer reference for Auto-Save
   const autoSaveTimer = useRef(null);
 
   const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
   const washiColors = ['#FFD1DC', '#FDFD96', '#C1E1C1', '#AEC6CF', '#E6E6FA']; 
 
-  // 🔄 NAYA: Load Existing Note OR Restore Draft (Wapas laane wala logic)
+  // Load Existing Note OR Restore Draft
   useEffect(() => {
     if (note) {
       setTitle(note.title); 
@@ -50,7 +47,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
       setDoodle(note.doodle || null);
       setPlacedItems(note.placedItems || []);
     } else {
-      // Agar naya note khula hai, toh check karo kya koi purana Draft pada hai?
       const loadDraft = async () => {
         try {
           const savedDraft = await AsyncStorage.getItem('@lumina_draft');
@@ -72,7 +68,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   }, [note]);
 
-  // 💾 NAYA: Draft Save Karne ka function
+  // Draft Save Karne ka function
   const saveDraftLocally = async () => {
     try {
       const draftData = { title, content, folder, noteColor, doodle, placedItems, timestamp: Date.now() };
@@ -82,7 +78,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // 🔄 NAYA: DEBOUNCE LOGIC (5 sec baad save)
+  // DEBOUNCE LOGIC (5 sec baad save)
   useEffect(() => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     
@@ -93,7 +89,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     return () => clearTimeout(autoSaveTimer.current);
   }, [title, content, folder, noteColor, doodle, placedItems]);
 
-  // 🚨 NAYA: APP-STATE LOGIC (Minimize hone par save)
+  // APP-STATE LOGIC (Minimize hone par save)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
@@ -126,7 +122,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
       const highlightedText = textBefore + `【${selectedText}】` + textAfter;
       setContent(highlightedText);
     } else {
-      Alert.alert('Pro Tip 💡', 'Pehle text ko select/highlight karo, phir mark dabao!');
+      // 🚀 NAYA: Professional English Warning
+      Alert.alert('Pro Tip 💡', 'Please select some text first, then tap Mark!');
     }
   };
 
@@ -144,7 +141,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
     });
   };
 
-  // ── Helper: convert 【text】 markers → <mark> tags ──────────────────────────
   const convertHighlightsToHtml = (rawText) => {
     const escaped = rawText
       .replace(/&/g, '&amp;')
@@ -157,7 +153,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
     );
   };
 
-  // ── 1. AESTHETIC PDF (Screenshot path) ──────────────────────────────────────
   const generateAestheticPDF = async () => {
     if (!title.trim()) {
       Alert.alert('Oops!', 'Please enter a Topic Title! 📚');
@@ -200,7 +195,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // ── 2. PROFESSIONAL PDF (pure HTML/CSS) ─────────────────────────────────────
   const generateProfessionalPDF = async () => {
     if (!title.trim()) {
       Alert.alert('Oops!', 'Please enter a Topic Title! 📚');
@@ -295,7 +289,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // Secure Cloud Agent Connection!
   const handleAiAction = async (actionId) => {
     setShowAiModal(false); 
     
@@ -333,16 +326,19 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
+  // 🚀 NAYA: Main Wrapper ab KeyboardAvoidingView ban gaya hai
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+    >
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
         
-        {/* 🚀 NAYA: Jab Save dabaye, toh purana draft hata de */}
         <TouchableOpacity 
           style={styles.saveBtn} 
           onPress={async () => {
-            await AsyncStorage.removeItem('@lumina_draft'); // Draft Clear
+            await AsyncStorage.removeItem('@lumina_draft'); 
             onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems);
           }}>
           <Text style={styles.saveBtnText}>Save Note</Text>
@@ -467,8 +463,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
       <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
 
-      <Modal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
-
       <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
           <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}>
@@ -484,7 +478,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
         onSelectAction={handleAiAction}
       />
 
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -530,7 +524,6 @@ const styles = StyleSheet.create({
   doodleImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   removeDoodle: { position: 'absolute', top: 10, right: 10, backgroundColor: '#2D2A2E', width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
   
-  // ── Dual Export Footer Styles ──
   exportFooter: { paddingTop: 10, paddingBottom: 6 },
   exportFooterHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
   exportFooterLine: { flex: 1, height: 1, backgroundColor: '#EAE6E1' },
