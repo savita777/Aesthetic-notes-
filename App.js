@@ -10,6 +10,9 @@ import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
 import { Colors } from './src/theme/colors';
 
+// 🛡️ NAYA: Humara Vault Gate Import kiya gaya
+import PrivacyGate from './src/components/PrivacyGate';
+
 SplashScreen.preventAutoHideAsync();
 
 const CLAUDE_COLORS = { background: '#F8F9FA', accent: '#4A90E2' };
@@ -156,25 +159,28 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  // ✅ 🚀 CLEAN & FULLY MERGED NAVIGATION (No Test Editor)
+  // ✅ 🚀 CLEAN & FULLY MERGED NAVIGATION
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
-      
-      {currentScreen === 'home' ? (
-        <HomeScreen 
-          notes={notes}
-          onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
-          onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
-        />
-      ) : (
-        <NoteScreen 
-          note={selectedNote}
-          onSave={handleSaveNote}
-          onBack={() => { setCurrentScreen('home'); setSelectedNote(null); }}
-        />
-      )}
-    </SafeAreaView>
+    // 🛡️ NAYA: PrivacyGate se puri app wrap ho gayi hai. Lock screen ke baad hi children render honge.
+    <PrivacyGate session={session}>
+      <SafeAreaView style={styles.container}>
+        <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
+        
+        {currentScreen === 'home' ? (
+          <HomeScreen 
+            notes={notes}
+            onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
+            onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
+          />
+        ) : (
+          <NoteScreen 
+            note={selectedNote}
+            onSave={handleSaveNote}
+            onBack={() => { setCurrentScreen('home'); setSelectedNote(null); }}
+          />
+        )}
+      </SafeAreaView>
+    </PrivacyGate>
   );
 }
 
@@ -186,4 +192,4 @@ const styles = StyleSheet.create({
   splashBrandName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 28, fontWeight: '700', color: '#1A1D23', letterSpacing: 0.5, marginBottom: 24 },
   splashSpinner: { marginTop: 4 },
 });
-    
+            
