@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-// ☁️ NAYA: KeyboardAvoidingView aur Platform import kiya gaya hai
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal, AppState, KeyboardAvoidingView, Platform } from 'react-native'; 
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -326,11 +325,11 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // 🚀 NAYA: Main Wrapper ab KeyboardAvoidingView ban gaya hai
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+      // 🔥 YAHAN FIX KIYA HAI: Android par 'padding' ki wajah se keyboard blink ho raha tha, ise undefined kar diya.
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
@@ -398,7 +397,13 @@ export default function NoteScreen({ note, onSave, onBack }) {
       </View>
 
       <View style={styles.masterCanvasWrapper}>
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        {/* 🔥 YAHAN FIX KIYA HAI: keyboardShouldPersistTaps aur contentContainerStyle laga diya taaki tap karne par dismiss na ho */}
+        <ScrollView 
+          style={{ flex: 1 }} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+        >
           <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
             
             <View style={styles.ruledLinesContainer} pointerEvents="none">
@@ -465,7 +470,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
       <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
-          <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}>
+          <TouchableOpacity style={styles.closePomodoroBtn}onPress={() => setShowPomodoro(false)}>
             <Text style={styles.closePomodoroText}>✕ Close Timer</Text>
           </TouchableOpacity>
           <AestheticPomodoro />
@@ -474,8 +479,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
       <AiSparkModal 
         visible={showAiModal} 
-        o
-nClose={() => setShowAiModal(false)} 
+        onClose={() => setShowAiModal(false)} 
         onSelectAction={handleAiAction}
       />
 
@@ -537,4 +541,3 @@ const styles = StyleSheet.create({
   exportBtnTitle: { fontSize: 13, fontWeight: '700', color: '#2D2A2E', letterSpacing: 0.2 },
   exportBtnSub: { fontSize: 10, color: '#B8ADAF', letterSpacing: 0.3, textAlign: 'center' },
 });
-              
