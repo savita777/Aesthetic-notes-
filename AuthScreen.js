@@ -103,7 +103,8 @@ const AuthScreen = ({ onAuthSuccess }) => {
           >
             <View style={styles.card}>
               <View style={styles.header}>
-                <Text style={styles.title}>Lumina ✨</Text>
+                {/* ✨ Emoji hataya aur Lumina Notes add kiya */}
+                <Text style={styles.title}>Lumina Notes</Text>
                 <Text style={styles.subtitle}>
                   {isLogin
                     ? 'Welcome back. Log in to continue your notes.'
@@ -213,29 +214,30 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 28,
     paddingHorizontal: 22,
     paddingVertical: 26,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 7,
-    backdropFilter: 'blur(12px)',
+    shadowColor: '#C8BDBE',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
   },
   header: {
     marginBottom: 24,
   },
   title: {
-    fontSize: 38,
-    lineHeight: 44,
-    fontWeight: '800',
+    fontSize: 40,
+    lineHeight: 48,
+    // Android par cursive ke sath bold ajeeb lagta hai, isliye Platform specific weight
+    fontWeight: Platform.OS === 'ios' ? '600' : 'normal', 
+    fontFamily: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive', // Elegant Cursive font
     color: TEXT,
-    letterSpacing: -0.6,
-    marginBottom: 8,
+    letterSpacing: 0, // Cursive letters ko judne dene ke liye
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 15,
@@ -305,3 +307,4 @@ const styles = StyleSheet.create({
 });
 
 export default AuthScreen;
+              
