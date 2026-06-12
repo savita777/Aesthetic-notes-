@@ -156,7 +156,7 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  // ✅ 🚀 CLEAN & FULLY MERGED NAVIGATION
+  // ✅ 🚀 CLEAN & FULLY MERGED NAVIGATION (No Test Editor)
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
@@ -186,4 +186,4 @@ const styles = StyleSheet.create({
   splashBrandName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 28, fontWeight: '700', color: '#1A1D23', letterSpacing: 0.5, marginBottom: 24 },
   splashSpinner: { marginTop: 4 },
 });
-                                                  
+    
