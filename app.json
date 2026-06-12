@@ -15,7 +15,10 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Lumina Notes uses Face ID to protect your private knowledge library."
+      }
     },
     "android": {
       "adaptiveIcon": {
