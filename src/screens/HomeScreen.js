@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native'; // 🔍 NAYA: TextInput import kiya
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, TextInput, Keyboard } from 'react-native'; // 🔍 NAYA: Keyboard import kiya
 import { Colors } from '../theme/colors';
 
 import DailyStreakWidget from '../components/DailyStreakWidget';
@@ -7,19 +7,24 @@ import StudygramShareModal from '../components/StudygramShareModal';
 
 export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
-  // 🔍 NAYA: Search input ke liye state
+  // 🔍 Search input ke liye state
   const [searchQuery, setSearchQuery] = useState('');
   
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // 🔍 NAYA: Filter logic update kiya (Purana delete nahi kiya, bas search add kiya)
+  // 🚀 NAYA: Smart Filter Logic (Folder, Title, aur Content teeno mein dhoondhega)
   const filteredNotes = notes.filter(n => {
     const matchesSubject = activeSubject === 'All Notes' ? true : n.folder === activeSubject;
+    const query = searchQuery.toLowerCase().trim();
+    
+    if (!query) return matchesSubject;
+
     const matchesSearch = 
-      (n.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (n.content || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (n.title || '').toLowerCase().includes(query) ||
+      (n.content || '').toLowerCase().includes(query) ||
+      (n.folder || '').toLowerCase().includes(query);
     
     return matchesSubject && matchesSearch;
   });
@@ -28,6 +33,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
     <TouchableOpacity 
       style={[styles.notebookCard, { backgroundColor: item.color || '#FDF6F5' }]} 
       onPress={() => onSelectNote(item)}
+      activeOpacity={0.8}
     >
       <View style={styles.binderStrip}>
         <View style={styles.binderHole} />
@@ -63,7 +69,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
         </TouchableOpacity>
       </View>
 
-      {/* 🔍 NAYA: Aesthetic Search Bar */}
+      {/* 🔍 NAYA: Updated Search Bar (Touch area fix & Keyboard handled) */}
       <View style={styles.searchContainer}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -72,9 +78,17 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
           placeholderTextColor="#A09E9F"
           value={searchQuery}
           onChangeText={setSearchQuery}
+          returnKeyType="search"
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
+          <TouchableOpacity 
+            onPress={() => {
+              setSearchQuery('');
+              Keyboard.dismiss();
+            }} 
+            style={styles.clearSearchBtn}
+          >
             <Text style={styles.clearSearchText}>✕</Text>
           </TouchableOpacity>
         )}
@@ -104,7 +118,6 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🪹</Text>
           <Text style={styles.emptyText}>
-            {/* 🔍 NAYA: Agar search kar rahe hain toh message alag dikhega */}
             {searchQuery ? "No results found." : `No notes in ${activeSubject} yet.`}
           </Text>
           <Text style={styles.emptySubText}>
@@ -119,6 +132,8 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
           numColumns={2} 
           contentContainerStyle={styles.listContainer} 
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled" // 🚀 Fix: list scroll karne par keyboard na hate
+          keyboardDismissMode="on-drag"
         />
       )}
 
@@ -144,7 +159,7 @@ const styles = StyleSheet.create({
   shareIconBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, elevation: 2, shadowColor: '#FFB3BA', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 5 },
   shareIconText: { color: '#2D2A2E', fontWeight: '700', fontSize: 12 },
 
-  // 🔍 NAYA: Search Bar Styling
+  // 🔍 NAYA: Height 52 di hai taaki finger se tap karna asaan ho
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -153,7 +168,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderRadius: 16,
     paddingHorizontal: 15,
-    paddingVertical: 12,
+    height: 52, 
     borderWidth: 1,
     borderColor: '#EAE6E1',
     shadowColor: '#000',
@@ -163,9 +178,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   searchIcon: { fontSize: 16, marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 15, color: '#2D2A2E', padding: 0 },
-  clearSearchBtn: { paddingHorizontal: 5 },
-  clearSearchText: { fontSize: 14, color: '#A09E9F', fontWeight: 'bold' },
+  searchInput: { flex: 1, fontSize: 15, color: '#2D2A2E', height: '100%' },
+  // 🔍 Clear button ka touch area bada kiya hai
+  clearSearchBtn: { padding: 5, backgroundColor: '#F0EDE8', borderRadius: 12, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  clearSearchText: { fontSize: 10, color: '#8A8788', fontWeight: '900' },
 
   widgetContainer: { marginBottom: 15, width: '100%', alignItems: 'center' },
 
@@ -196,4 +212,3 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', right: 25, bottom: 40, backgroundColor: '#2D2A2E', width: 65, height: 65, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 8 },
   fabText: { fontSize: 26, marginLeft: 3 }
 });
-  
