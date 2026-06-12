@@ -17,12 +17,8 @@ import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 12) / 2; // two columns with gutters
+const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 12) / 2; 
 
-// ─── Per-subject spine color palette ─────────────────────────────────────────
-// Each subject gets its own tinted spine so the vault feels personally curated,
-// not generically categorized. Colors are desaturated to stay within Lumina's
-// calm, breathable aesthetic.
 const SUBJECT_PALETTE = {
   '📓 Physics':  { spine: '#A8C5DA', bg: '#F0F6FA', emoji: '📓' },
   '📐 Maths':    { spine: '#B5C9A8', bg: '#F2F7F0', emoji: '📐' },
@@ -36,9 +32,6 @@ function getSubjectPalette(subject) {
   return SUBJECT_PALETTE[subject] || DEFAULT_PALETTE;
 }
 
-// ─── Collection Card ──────────────────────────────────────────────────────────
-// The signature element: a notebook cover with a colored spine on the left,
-// ruled-line texture, subject name, and note count. Tapping filters the list below.
 function CollectionCard({ subject, count, isActive, onPress }) {
   const palette = getSubjectPalette(subject);
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -48,94 +41,73 @@ function CollectionCard({ subject, count, isActive, onPress }) {
   const handlePressOut = () =>
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
-  // Strip the emoji from the label for the large display text
   const labelText = subject.replace(/^\S+\s/, '');
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={onPress}
-        style={[
-          styles.collectionCard,
-          { backgroundColor: palette.bg },
-          isActive && styles.collectionCardActive,
-        ]}
-      >
-        {/* Spine */}
-        <View style={[styles.collectionSpine, { backgroundColor: palette.spine }]}>
-          <Text style={styles.spineLabel} numberOfLines={4}>
+    <Animated.View [{ scale: scaleAnim style="{{" transform: }] }}>
+      <TouchableOpacity && ]} activeOpacity="{1}" backgroundColor: isActive onPress="{onPress}" onPressIn="{handlePressIn}" onPressOut="{handlePressOut}" palette.bg style="{[" styles.collectionCard, styles.collectionCardActive, { },>
+        <View backgroundColor: palette.spine style="{[styles.collectionSpine," { }]}>
+          <Text numberOfLines="{4}" style="{styles.spineLabel}">
             {labelText.toUpperCase()}
           </Text>
         </View>
 
-        {/* Cover body */}
-        <View style={styles.collectionBody}>
-          {/* Ruled line texture — evokes actual notebook paper */}
-          <View style={styles.ruledLines}>
-            <View style={styles.ruledLine} />
-            <View style={styles.ruledLine} />
-            <View style={styles.ruledLine} />
+        <View style="{styles.collectionBody}">
+          <View style="{styles.ruledLines}">
+            <View style="{styles.ruledLine}"/>
+            <View style="{styles.ruledLine}"/>
+            <View style="{styles.ruledLine}"/>
           </View>
 
-          {/* Subject emoji, large and centered */}
-          <Text style={styles.collectionEmoji}>{palette.emoji}</Text>
+          <Text style="{styles.collectionEmoji}">{palette.emoji}</Text>
 
-          <View style={styles.collectionMeta}>
-            <Text style={styles.collectionSubjectName} numberOfLines={1}>
+          <View style="{styles.collectionMeta}">
+            <Text numberOfLines="{1}" style="{styles.collectionSubjectName}">
               {labelText}
             </Text>
-            <Text style={styles.collectionNoteCount}>
+            <Text style="{styles.collectionNoteCount}">
               {count} {count === 1 ? 'note' : 'notes'}
             </Text>
           </View>
 
-          {/* Active indicator dot */}
-          {isActive && <View style={[styles.activeDot, { backgroundColor: palette.spine }]} />}
+          {isActive && <View backgroundColor: palette.spine style="{[styles.activeDot," { }]}/>}
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-// ─── Note Card ────────────────────────────────────────────────────────────────
-// Existing notebook card, refined: spine holes preserved, card now breathes more.
 function NoteCard({ item, onPress }) {
   return (
-    <TouchableOpacity
-      style={[styles.notebookCard, { backgroundColor: item.color || '#FDF6F5' }]}
-      onPress={() => onPress(item)}
+    <TouchableOpacity '#FDF6F5' backgroundColor: item.color onPress="{()" style="{[styles.notebookCard," { || }]}> onPress(item)}
       activeOpacity={0.8}
     >
-      <View style={styles.binderStrip}>
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
+      <View style="{styles.binderStrip}">
+        <View style="{styles.binderHole}"/>
+        <View style="{styles.binderHole}"/>
+        <View style="{styles.binderHole}"/>
+        <View style="{styles.binderHole}"/>
+        <View style="{styles.binderHole}"/>
       </View>
 
-      <View style={styles.notebookContent}>
-        <View style={styles.notebookLabel}>
-          <Text style={styles.labelSubject}>{item.folder || '📝 Journal'}</Text>
+      <View style="{styles.notebookContent}">
+        <View style="{styles.notebookLabel}">
+          <Text style="{styles.labelSubject}">{item.folder || '📝 Journal'}</Text>
         </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>
+        <Text numberOfLines="{2}" style="{styles.cardTitle}">
           {item.title || 'Untitled Session'}
         </Text>
-        <Text style={styles.cardSnippet} numberOfLines={3}>
+        <Text numberOfLines="{3}" style="{styles.cardSnippet}">
           {item.content || 'Tap to study...'}
         </Text>
-        <View style={styles.footer}>
-          <Text style={styles.cardDate}>{item.date?.split(' ')[0]}</Text>
+        <View style="{styles.footer}">
+          <Text style="{styles.cardDate}">{item.date?.split(' ')[0]}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 }
 
-// ─── HomeScreen ───────────────────────────────────────────────────────────────
 export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,7 +115,6 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
-  // ── Existing filter logic, fully preserved ──
   const filteredNotes = notes.filter(n => {
     const matchesSubject = activeSubject === 'All Notes' ? true : n.folder === activeSubject;
     const query = searchQuery.toLowerCase().trim();
@@ -155,21 +126,19 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
     return matchesSubject && matchesSearch;
   });
 
-  // Count notes per subject for collection cards
   function countForSubject(subject) {
     if (subject === 'All Notes') return notes.length;
     return notes.filter(n => n.folder === subject).length;
   }
 
-  // Section header for "Recent Notes" — shows active context and count
   const recentHeader = () => {
     const label = activeSubject === 'All Notes' ? 'All Notes' : activeSubject.replace(/^\S+\s/, '');
     const count = filteredNotes.length;
     return (
-      <View style={styles.sectionHeader}>
+      <View style="{styles.sectionHeader}">
         <View>
-          <Text style={styles.sectionTitle}>Recent Notes</Text>
-          <Text style={styles.sectionSubtitle}>
+          <Text style="{styles.sectionTitle}">Recent Notes</Text>
+          <Text style="{styles.sectionSubtitle}">
             {searchQuery
               ? `${count} result${count !== 1 ? 's' : ''} for "${searchQuery}"`
               : `${count} ${count === 1 ? 'note' : 'notes'} in ${label}`}
@@ -179,124 +148,87 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
     );
   };
 
-  // Rendered inside FlatList as ListHeaderComponent so everything scrolls together
   const ListHeader = () => (
     <>
-      {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style="{styles.header}">
         <View>
-          <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
-          <Text style={styles.headerTitle}>My Study Space</Text>
+          <Text style="{styles.greetingText}">Ready to Focus? ✨</Text>
+          <Text style="{styles.headerTitle}">My Study Space</Text>
         </View>
-        <TouchableOpacity
-          style={styles.shareIconBtn}
-          onPress={() => setShowShareModal(true)}
+        <TouchableOpacity onPress="{()" style="{styles.shareIconBtn}"> setShowShareModal(true)}
         >
-          <Text style={styles.shareIconText}>📸 Share</Text>
+          <Text style="{styles.shareIconText}">📸 Share</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Search Bar ── */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search notes, topics, or keywords..."
-          placeholderTextColor="#A09E9F"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          returnKeyType="search"
-          onSubmitEditing={() => Keyboard.dismiss()}
+      <View style="{styles.searchContainer}">
+        <Text style="{styles.searchIcon}">🔍</Text>
+        <TextInput onChangeText="{setSearchQuery}" onSubmitEditing="{()" placeholder="Search notes, topics, or keywords..." placeholderTextColor="#A09E9F" returnKeyType="search" style="{styles.searchInput}" value="{searchQuery}"> Keyboard.dismiss()}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }}
+          <TouchableOpacity onPress="{()"> { setSearchQuery(''); Keyboard.dismiss(); }}
             style={styles.clearSearchBtn}
           >
-            <Text style={styles.clearSearchText}>✕</Text>
+            <Text style="{styles.clearSearchText}">✕</Text>
           </TouchableOpacity>
         )}
+      </TextInput></View>
+
+      <View style="{styles.widgetContainer}">
+        <DailyStreakWidget/>
       </View>
 
-      {/* ── Daily Streak Widget ── */}
-      <View style={styles.widgetContainer}>
-        <DailyStreakWidget />
-      </View>
-
-      {/* ── Collections / Knowledge Vault ── */}
-      <View style={styles.sectionHeader}>
+      <View style="{styles.sectionHeader}">
         <View>
-          <Text style={styles.sectionTitle}>Knowledge Vault</Text>
-          <Text style={styles.sectionSubtitle}>
+          <Text style="{styles.sectionTitle}">Knowledge Vault</Text>
+          <Text style="{styles.sectionSubtitle}">
             {allSubjects.length - 1} collections · {notes.length} notes total
           </Text>
         </View>
-        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}>
-          <Text style={styles.seeAllText}>See All</Text>
+        <TouchableOpacity onPress="{()"> setActiveSubject('All Notes')}>
+          <Text style="{styles.seeAllText}">See All</Text>
         </TouchableOpacity>
       </View>
 
-      {/* "All Notes" row + subject grid */}
-      <View style={styles.collectionsGrid}>
-        {/* "All Notes" spans full width as a wide summary card */}
-        <TouchableOpacity
-          style={[
-            styles.allNotesCard,
-            activeSubject === 'All Notes' && styles.allNotesCardActive,
-          ]}
-          onPress={() => setActiveSubject('All Notes')}
+      <View style="{styles.collectionsGrid}">
+        <TouchableOpacity && 'All Notes' ]} activeSubject="==" onPress="{()" style="{[" styles.allNotesCard, styles.allNotesCardActive,> setActiveSubject('All Notes')}
           activeOpacity={0.85}
         >
-          <View style={[styles.allNotesSpine, activeSubject === 'All Notes' && styles.allNotesSpineActive]} />
-          <View style={styles.allNotesBody}>
-            <Text style={styles.allNotesEmoji}>🗂</Text>
+          <View && 'All Notes' activeSubject="==" style="{[styles.allNotesSpine," styles.allNotesSpineActive]}/>
+          <View style="{styles.allNotesBody}">
+            <Text style="{styles.allNotesEmoji}">🗂</Text>
             <View>
-              <Text style={styles.allNotesTitle}>All Notes</Text>
-              <Text style={styles.allNotesCount}>{notes.length} notes across all vaults</Text>
+              <Text style="{styles.allNotesTitle}">All Notes</Text>
+              <Text style="{styles.allNotesCount}">{notes.length} notes across all vaults</Text>
             </View>
           </View>
-          {activeSubject === 'All Notes' && <View style={styles.allNotesActiveDot} />}
+          {activeSubject === 'All Notes' && <View style="{styles.allNotesActiveDot}"/>}
         </TouchableOpacity>
 
-        {/* 2-column collection cards for each subject */}
-        <View style={styles.collectionsRow}>
+        <View style="{styles.collectionsRow}">
           {allSubjects.slice(1).map((subject) => (
-            <CollectionCard
-              key={subject}
-              subject={subject}
-              count={countForSubject(subject)}
-              isActive={activeSubject === subject}
-              onPress={() => setActiveSubject(activeSubject === subject ? 'All Notes' : subject)}
+            <CollectionCard count="{countForSubject(subject)}" isActive="{activeSubject" key="{subject}" onPress="{()" subject="{subject}" subject}> setActiveSubject(activeSubject === subject ? 'All Notes' : subject)}
             />
           ))}
-        </View>
+        </CollectionCard></View>
       </View>
 
-      {/* Divider before notes list */}
-      <View style={styles.divider} />
-
-      {/* ── Recent Notes section header ── */}
+      <View style="{styles.divider}"/>
       {recentHeader()}
     </>
   );
 
   return (
-    <View style={styles.container}>
+    <View style="{styles.container}">
       {filteredNotes.length === 0 ? (
-        // Empty state: still scrollable so the header/collections are accessible
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
-          <ListHeader />
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🪹</Text>
-            <Text style={styles.emptyText}>
+        <ScrollView 120 contentContainerStyle="{{" keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" paddingBottom: showsVerticalScrollIndicator="{false}" }}>
+          <ListHeader/>
+          <View style="{styles.emptyContainer}">
+            <Text style="{styles.emptyIcon}">🪹</Text>
+            <Text style="{styles.emptyText}">
               {searchQuery ? 'No results found.' : `No notes in ${activeSubject.replace(/^\S+\s/, '')} yet.`}
             </Text>
-            <Text style={styles.emptySubText}>
+            <Text style="{styles.emptySubText}">
               {searchQuery
                 ? 'Try a different keyword!'
                 : 'Start building your knowledge vault!'}
@@ -304,14 +236,12 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
           </View>
         </ScrollView>
       ) : (
-        <FlatList
-          data={filteredNotes}
-          keyExtractor={(item) => item.id}
+        <FlatList data="{filteredNotes}" keyExtractor="{(item)"> item.id}
           renderItem={({ item }) => (
-            <NoteCard item={item} onPress={onSelectNote} />
+            <NoteCard item="{item}" onPress="{onSelectNote}"/>
           )}
           numColumns={2}
-          ListHeaderComponent={<ListHeader />}
+          ListHeaderComponent={<ListHeader/>}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -319,31 +249,22 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
         />
       )}
 
-      {/* ── FAB ── */}
-      <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
-        <Text style={styles.fabText}>✏️</Text>
+      <TouchableOpacity onPress="{onCreateNew}" style="{styles.fab}">
+        <Text style="{styles.fabText}">✏️</Text>
       </TouchableOpacity>
 
-      {/* ── Share Modal ── */}
-      <StudygramShareModal
-        visible={showShareModal}
-        onClose={() => setShowShareModal(false)}
+      <StudygramShareModal onClose="{()" visible="{showShareModal}"> setShowShareModal(false)}
       />
-    </View>
+    </StudygramShareModal></FlatList></View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-
-  // ── Screen ──
   container: {
     flex: 1,
     backgroundColor: '#FDFBF7',
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
   },
-
-  // ── Header ──
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -379,8 +300,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-
-  // ── Search ──
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -410,15 +329,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clearSearchText: { fontSize: 10, color: '#8A8788', fontWeight: '900' },
-
-  // ── Widget ──
   widgetContainer: {
     marginBottom: 20,
     width: '100%',
     alignItems: 'center',
   },
-
-  // ── Section headers ──
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -443,14 +358,10 @@ const styles = StyleSheet.create({
     color: '#B5838D',
     fontWeight: '600',
   },
-
-  // ── Collections grid container ──
   collectionsGrid: {
     paddingHorizontal: 20,
     marginBottom: 8,
   },
-
-  // ── All Notes wide card ──
   allNotesCard: {
     width: '100%',
     height: 68,
@@ -506,15 +417,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#B5838D',
     marginRight: 16,
   },
-
-  // ── Subject grid (2 columns) ──
   collectionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-
-  // ── Individual collection card ──
   collectionCard: {
     width: CARD_WIDTH,
     height: 148,
@@ -535,8 +442,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     shadowOpacity: 0.12,
   },
-
-  // Spine: narrow left strip, rotated label text
   collectionSpine: {
     width: 22,
     height: '100%',
@@ -551,12 +456,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textAlign: 'center',
     transform: [{ rotate: '180deg' }],
-    writingDirection: 'ltr',
-    // React Native doesn't support CSS writing-mode, so we rotate and use
-    // a narrow column — text flows naturally downward after rotation.
   },
-
-  // Cover body: ruled lines + emoji + meta
   collectionBody: {
     flex: 1,
     padding: 12,
@@ -597,8 +497,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-
-  // ── Divider ──
   divider: {
     height: 1,
     backgroundColor: '#EDE8E0',
@@ -606,8 +504,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 20,
   },
-
-  // ── Note cards (existing, refined) ──
   listContainer: {
     paddingHorizontal: 12,
     paddingBottom: 120,
@@ -683,8 +579,6 @@ const styles = StyleSheet.create({
     color: '#999',
     fontWeight: '600',
   },
-
-  // ── Empty state ──
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -707,11 +601,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-
-  // ── FAB ──
   fab: {
     position: 'absolute',
     right: 22,
     bottom: 38,
     backgroundColor: '#2D2A2E',
-    width:
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#2D2A2E',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+  },
+  fabText: { fontSize: 26, marginLeft: 2 },
+});
