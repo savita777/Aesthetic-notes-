@@ -121,7 +121,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
       const highlightedText = textBefore + `【${selectedText}】` + textAfter;
       setContent(highlightedText);
     } else {
-      // 🚀 NAYA: Professional English Warning
       Alert.alert('Pro Tip 💡', 'Please select some text first, then tap Mark!');
     }
   };
@@ -288,6 +287,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
+  // 🚀 NAYA: The Bulletproof Offline Guard for AI Spark
   const handleAiAction = async (actionId) => {
     setShowAiModal(false); 
     
@@ -302,12 +302,19 @@ export default function NoteScreen({ note, onSave, onBack }) {
     try {
       const smartPrompt = `Act as an expert study assistant. The user wants you to perform this action: "${actionId}". \n\nHere are the user's notes:\n\n${content}\n\nPlease provide a helpful, clean, and aesthetic response.`;
 
-      const { data, error } = await supabase.functions.invoke('ask-gemini', {
+      // Timeout Logic: Agar 12 second mein reply nahi aaya (offline), toh error dega
+      const fetchPromise = supabase.functions.invoke('ask-gemini', {
         body: { prompt: smartPrompt }
       });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 12000)
+      );
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (error) {
-        throw new Error("Could not connect to AI Cloud: " + error.message);
+        throw new Error(error.message || "Failed to fetch");
       }
       
       const result = data?.reply || data?.text || data?.answer || data?.response || "Lumina AI is speechless!";
@@ -318,8 +325,15 @@ export default function NoteScreen({ note, onSave, onBack }) {
       });
       
     } catch (error) {
+      // Clean up the thinking text
       setContent(prev => prev.replace('\n\n✨ [Lumina AI is thinking...]', ''));
-      Alert.alert('AI Error', error.message);
+      
+      // Friendly Offline/Error Alert
+      if (error.message === 'Timeout' || error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+        Alert.alert('No Internet 📶', 'Lumina AI needs an active internet connection. Please check your network and try again!');
+      } else {
+        Alert.alert('AI Error 🤖', 'Something went wrong: ' + error.message);
+      }
     } finally {
       setIsAiThinking(false);
     }
@@ -328,7 +342,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
-      // 🔥 YAHAN FIX KIYA HAI: Android par 'padding' ki wajah se keyboard blink ho raha tha, ise undefined kar diya.
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.headerBar}>
@@ -397,7 +410,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
       </View>
 
       <View style={styles.masterCanvasWrapper}>
-        {/* 🔥 YAHAN FIX KIYA HAI: keyboardShouldPersistTaps aur contentContainerStyle laga diya taaki tap karne par dismiss na ho */}
         <ScrollView 
           style={{ flex: 1 }} 
           showsVerticalScrollIndicator={false}
@@ -461,7 +473,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
           >
             <Text style={styles.exportBtnIcon}>📄</Text>
             <Text style={styles.exportBtnTitle}>Professional PDF</Text>
-            <Text style={styles.exportBtnSub}>Text · Long notes</Text>
+            <Text style={styles.exportBtnSub}>Text· Long notes</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -470,7 +482,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
       <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
-          <TouchableOpacity style={styles.closePomodoroBtn}onPress={() => setShowPomodoro(false)}>
+          <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}>
             <Text style={styles.closePomodoroText}>✕ Close Timer</Text>
           </TouchableOpacity>
           <AestheticPomodoro />
