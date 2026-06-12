@@ -1,18 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native'; // 🔍 NAYA: TextInput import kiya
 import { Colors } from '../theme/colors';
 
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
 
-// 🧪 NAYA: onTestEditor prop ab use nahi ho raha toh uski zaroorat nahi
 export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
+  // 🔍 NAYA: Search input ke liye state
+  const [searchQuery, setSearchQuery] = useState('');
+  
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
   const [showShareModal, setShowShareModal] = useState(false);
 
-  const filteredNotes = activeSubject === 'All Notes' ? notes : notes.filter(n => n.folder === activeSubject);
+  // 🔍 NAYA: Filter logic update kiya (Purana delete nahi kiya, bas search add kiya)
+  const filteredNotes = notes.filter(n => {
+    const matchesSubject = activeSubject === 'All Notes' ? true : n.folder === activeSubject;
+    const matchesSearch = 
+      (n.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (n.content || '').toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesSubject && matchesSearch;
+  });
 
   const renderNotebookCard = ({ item }) => (
     <TouchableOpacity 
@@ -53,6 +63,23 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
         </TouchableOpacity>
       </View>
 
+      {/* 🔍 NAYA: Aesthetic Search Bar */}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search notes, mocks, or keywords..."
+          placeholderTextColor="#A09E9F"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
+            <Text style={styles.clearSearchText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
@@ -76,8 +103,13 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
       {filteredNotes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🪹</Text>
-          <Text style={styles.emptyText}>No notes in {activeSubject} yet.</Text>
-          <Text style={styles.emptySubText}>Start building your aesthetic knowledge base!</Text>
+          <Text style={styles.emptyText}>
+            {/* 🔍 NAYA: Agar search kar rahe hain toh message alag dikhega */}
+            {searchQuery ? "No results found." : `No notes in ${activeSubject} yet.`}
+          </Text>
+          <Text style={styles.emptySubText}>
+             {searchQuery ? "Try a different keyword!" : "Start building your aesthetic knowledge base!"}
+          </Text>
         </View>
       ) : (
         <FlatList 
@@ -111,6 +143,29 @@ const styles = StyleSheet.create({
   
   shareIconBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, elevation: 2, shadowColor: '#FFB3BA', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 5 },
   shareIconText: { color: '#2D2A2E', fontWeight: '700', fontSize: 12 },
+
+  // 🔍 NAYA: Search Bar Styling
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#EAE6E1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  searchIcon: { fontSize: 16, marginRight: 10 },
+  searchInput: { flex: 1, fontSize: 15, color: '#2D2A2E', padding: 0 },
+  clearSearchBtn: { paddingHorizontal: 5 },
+  clearSearchText: { fontSize: 14, color: '#A09E9F', fontWeight: 'bold' },
 
   widgetContainer: { marginBottom: 15, width: '100%', alignItems: 'center' },
 
