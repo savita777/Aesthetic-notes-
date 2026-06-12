@@ -18,6 +18,7 @@
     "expo-file-system": "~17.0.1",
     "@google/generative-ai": "*",
     "react-native-url-polyfill": "*",
-    "@supabase/supabase-js": "^2.43.0"
+    "@supabase/supabase-js": "^2.43.0",
+    "expo-local-authentication": "~14.0.1"
   }
 }
