@@ -65,6 +65,17 @@ export default function App() {
     }
   }, [session]);
 
+  // 🚀 NAYA: Secure Logout Function
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      console.log("User successfully logged out! ✅");
+    } catch (error) {
+      console.log("Logout error ❌:", error);
+    }
+  };
+
   const fetchUserNotes = async (userId) => {
     try {
       const { data, error } = await supabase
@@ -115,7 +126,10 @@ export default function App() {
       title, content, color, folder: folder || '📔 Diary', doodle, placedItems, date: aestheticDate
     };
 
+    let isExistingNote = false;
+
     if (selectedNote) {
+      isExistingNote = true;
       updatedNotes = notes.map(n => n.id === selectedNote.id ? { 
         ...n, title, content, color, folder, doodle, placedItems, date: aestheticDate 
       } : n);
@@ -124,24 +138,41 @@ export default function App() {
     }
 
     try {
-      const { error } = await supabase
-        .from('notes')
-        .insert([
-          { 
+      if (isExistingNote && selectedNote.id) {
+        // 🚀 CTO'S SECRET FIX: Agar note pehle se hai toh Cloud par UPDATE karo, Duplicate mat banao
+        const { error } = await supabase
+          .from('notes')
+          .update({
             title: title || "Untitled",
             content: content || "Khali note",
             color: color || "#FDF6F5",
-            folder: folder || "📔 Diary",
-            user_id: session?.user?.id 
-          } 
-        ]);
+            folder: folder || "📔 Diary"
+          })
+          .eq('id', selectedNote.id) // Assuming id matches
+          .eq('user_id', session?.user?.id); // Extra security
 
-      if (error) {
-        console.log("Cloud Save Error ❌:", error);
+        if (error) console.log("Cloud Update Error ❌:", error);
+        else console.log("Note Cloud par Update ho gaya! ✅☁️");
+
       } else {
-        console.log("Pura Note Cloud par save ho gaya! ✅☁️");
-        fetchUserNotes(session.user.id);
+        // Naya Note Insert karo
+        const { error } = await supabase
+          .from('notes')
+          .insert([
+            { 
+              title: title || "Untitled",
+              content: content || "Khali note",
+              color: color || "#FDF6F5",
+              folder: folder || "📔 Diary",
+              user_id: session?.user?.id 
+            } 
+          ]);
+
+        if (error) console.log("Cloud Insert Error ❌:", error);
+        else console.log("Naya Note Cloud par save ho gaya! ✅☁️");
       }
+      
+      fetchUserNotes(session.user.id);
     } catch (err) {
       console.log("Network error ❌:", err);
     }
@@ -155,6 +186,7 @@ export default function App() {
     return <SplashLoader />;
   }
 
+  // ✅ Yahi wo jageh hai jahan Login dikhta hai! (Agar session null ho)
   if (!session) {
     return <AuthScreen />;
   }
@@ -171,6 +203,7 @@ export default function App() {
             notes={notes}
             onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
             onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
+            onLogout={handleLogout} // 🚀 NAYA: Logout ka connection Home Screen ko de diya
           />
         ) : (
           <NoteScreen 
@@ -192,4 +225,4 @@ const styles = StyleSheet.create({
   splashBrandName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 28, fontWeight: '700', color: '#1A1D23', letterSpacing: 0.5, marginBottom: 24 },
   splashSpinner: { marginTop: 4 },
 });
-            
+    
