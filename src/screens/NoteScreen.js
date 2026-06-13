@@ -4,7 +4,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system'; // 🚀 NAYA: Image ko PDF ke liye convert karne ke liye
+import * as FileSystem from 'expo-file-system'; // 🚀 NAYA: Image ko Base64 mein convert karne ke liye
 
 // True Rich Text Engine Imports
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
@@ -19,7 +19,8 @@ import { supabase } from '../../supabase';
 
 const { width, height } = Dimensions.get('window');
 
-export default function NoteScreen({ note, onSave, onBack }) {
+// 🚀 NAYA: onDelete prop add kiya hai taaki App.js delete ko control kar sake
+export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [noteColor, setNoteColor] = useState('#FDF6F5'); 
@@ -100,7 +101,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     return () => subscription.remove();
   }, [title, content, folder, noteColor, doodle, placedItems]);
 
-  // 🚀 NAYA: DELETE NOTE FUNCTION
+  // 🚀 NAYA: FIXED DELETE FUNCTION - Ab yeh seedha App.js ka function call karega
   const handleDelete = () => {
     Alert.alert(
       "Delete Note",
@@ -111,16 +112,12 @@ export default function NoteScreen({ note, onSave, onBack }) {
           text: "Delete", 
           style: "destructive", 
           onPress: async () => {
-            if (note?.id) {
-              try {
-                await supabase.from('notes').delete().eq('id', note.id);
-                console.log("✅ Cloud se delete ho gaya");
-              } catch (e) {
-                console.log("Cloud delete error", e);
-              }
-            }
             await AsyncStorage.removeItem('@lumina_draft');
-            onBack(); // Wapas Home Screen par le jayega
+            if (onDelete && note?.id) {
+              onDelete(note.id); // Command sent to App.js!
+            } else {
+              onBack();
+            }
           } 
         }
       ]
@@ -186,7 +183,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
       const bodyHtml = content; 
       const hasAttachments = doodle || placedItems.length > 0;
 
-      // 🚀 NAYA: Convert local Doodle URI to Base64 to render safely in PDF
       let doodleSection = '';
       if (doodle) {
         try {
@@ -325,16 +321,16 @@ export default function NoteScreen({ note, onSave, onBack }) {
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // 🚀 NAYA: Changed from undefined to 'height' to push layout up
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
     >
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
         
-        {/* 🚀 NAYA: DELETE & SAVE BUTTON CONTAINER */}
-        <View style={{flexDirection: 'row', gap: 10}}>
-          {note && ( // Show trash only if it's an existing note
+        {/* 🚀 NAYA: DELETE & SAVE BUTTON CONTAINER REFINED */}
+        <View style={styles.headerActions}>
+          {note && ( 
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Text style={styles.deleteBtnText}>🗑️</Text>
+              <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
@@ -408,9 +404,9 @@ export default function NoteScreen({ note, onSave, onBack }) {
         <ScrollView 
           style={{ flex: 1 }} 
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled" // 🚀 NAYA: Ensures taps are handled safely
-          nestedScrollEnabled={true} // 🚀 NAYA: Helps WebView inside ScrollView handle touch correctly
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} // Extra padding at bottom
+          keyboardShouldPersistTaps="handled" 
+          nestedScrollEnabled={true} 
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} 
         >
           <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
             <View style={styles.ruledLinesContainer} pointerEvents="none">
@@ -431,14 +427,14 @@ export default function NoteScreen({ note, onSave, onBack }) {
                 placeholderColor: '#A09E9F',
                 cssText: `
                   body { font-family: -apple-system, 'Georgia', serif; font-size: 17px; line-height: 35px; margin: 0; padding: 0; }
-                  h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; line-height: 35px; }
-                  ul { margin: 0; padding-left: 20px; line-height: 35px; }
+                  h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; padding-left: 20px; line-height: 35px; }
                   blockquote { border-left: 3px solid #B5838D; padding-left: 10px; color: #6E6B70; font-style: italic; margin: 0; }
                 `
               }}
               useContainer={true}
             />
             
+            {/* Kept for backwards compatibility with older drafts */}
             {doodle && (
               <View style={styles.doodlePreview}>
                 <Image source={{ uri: doodle }} style={styles.doodleImage} />
@@ -473,7 +469,25 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </View>
       </View>
 
-      <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={(uri) => { setDoodle(uri); setShowDraw(false); }} />
+      {/* 🚀 NAYA: INLINE DRAWING FIX (Saves directly into Rich Editor) */}
+      <DrawModal 
+        visible={showDraw} 
+        onClose={() => setShowDraw(false)} 
+        onSave={async (uri) => { 
+          setShowDraw(false);
+          try {
+            const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+            const b64Data = `data:image/png;base64,${base64Str}`;
+            
+            // Image tag generated and inserted directly into the editor!
+            const imgHtml = `<br><br><img src="${b64Data}" style="width: 100%; border-radius: 12px; border: 1px solid #EAE6E1;" /><br><br>`;
+            richEditorRef.current?.insertHTML(imgHtml);
+          } catch(e) {
+            console.log("Base64 conversion error:", e);
+            Alert.alert("Drawing Error", "Could not save the drawing.");
+          }
+        }} 
+      />
 
       <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
@@ -494,11 +508,12 @@ const styles = StyleSheet.create({
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   backButton: { fontSize: 16, color: '#8A8788', fontWeight: 'bold' },
   
-  // 🚀 NAYA: Styles for Save & Delete Buttons
+  // 🚀 NAYA: Styles for Action Buttons
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   saveBtn: { backgroundColor: '#2D2A2E', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  deleteBtn: { backgroundColor: '#FFE4E1', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 25, justifyContent: 'center' },
-  deleteBtnText: { fontSize: 16 },
+  deleteBtn: { backgroundColor: '#FFF0F3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 25, borderWidth: 1, borderColor: '#FFB3BA' },
+  deleteBtnText: { color: '#D9534F', fontWeight: '700', fontSize: 13 },
   
   folderInput: { fontSize: 14, color: '#8A8788', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
   titleInput: { fontSize: 28, fontWeight: '800', color: '#2D2A2E', marginBottom: 15, lineHeight: 32 },
@@ -544,5 +559,4 @@ const styles = StyleSheet.create({
   exportBtnIcon: { fontSize: 22, marginBottom: 2 },
   exportBtnTitle: { fontSize: 13, fontWeight: '700', color: '#2D2A2E', letterSpacing: 0.2 },
   exportBtnSub: { fontSize: 10, color: '#B8ADAF', letterSpacing: 0.3, textAlign: 'center' },
-}); 
-    
+});
