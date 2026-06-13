@@ -182,6 +182,26 @@ export default function App() {
     setSelectedNote(null);
   };
 
+  // 🚀 NAYA: MASTER DELETE FUNCTION
+  const handleDeleteNote = async (noteId) => {
+    // 1. Turant Home screen se gayab karo (Local UI Update)
+    const updatedNotes = notes.filter(n => n.id !== noteId);
+    setNotes(updatedNotes);
+    await AsyncStorage.setItem('@aesthetic_notes', JSON.stringify(updatedNotes));
+
+    // 2. Cloud se hamesha ke liye uda do
+    try {
+      await supabase.from('notes').delete().eq('id', noteId).eq('user_id', session?.user?.id);
+      console.log("✅ Note fully deleted from Cloud!");
+    } catch (err) {
+      console.log("Delete error:", err);
+    }
+
+    // 3. Wapas Home screen par jao
+    setCurrentScreen('home');
+    setSelectedNote(null);
+  };
+
   if (initializing) {
     return <SplashLoader />;
   }
@@ -209,6 +229,7 @@ export default function App() {
           <NoteScreen 
             note={selectedNote}
             onSave={handleSaveNote}
+            onDelete={handleDeleteNote} // 🚀 NAYA: Delete function passed to NoteScreen
             onBack={() => { setCurrentScreen('home'); setSelectedNote(null); }}
           />
         )}
@@ -225,4 +246,4 @@ const styles = StyleSheet.create({
   splashBrandName: { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', fontSize: 28, fontWeight: '700', color: '#1A1D23', letterSpacing: 0.5, marginBottom: 24 },
   splashSpinner: { marginTop: 4 },
 });
-    
+        
