@@ -5,6 +5,9 @@ import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// 🚀 NAYA: True Rich Text Engine Imports
+import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
+
 import { Colors } from '../theme/colors';
 import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
@@ -30,8 +33,10 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const [isAiThinking, setIsAiThinking] = useState(false);
 
   const noteViewShotRef = useRef();
-  
   const autoSaveTimer = useRef(null);
+  
+  // 🚀 NAYA: RichEditor Reference
+  const richEditorRef = useRef(null);
 
   const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
   const washiColors = ['#FFD1DC', '#FDFD96', '#C1E1C1', '#AEC6CF', '#E6E6FA']; 
@@ -45,6 +50,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
       setFolder(note.folder || '');
       setDoodle(note.doodle || null);
       setPlacedItems(note.placedItems || []);
+      // Sync RichEditor on load
+      setTimeout(() => richEditorRef.current?.setContentHTML(note.content), 100);
     } else {
       const loadDraft = async () => {
         try {
@@ -58,6 +65,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
             if (parsedDraft.doodle) setDoodle(parsedDraft.doodle);
             if (parsedDraft.placedItems) setPlacedItems(parsedDraft.placedItems);
             console.log("✅ Purana Data (Draft) Wapas Aa Gaya!");
+            // Sync RichEditor with Draft
+            setTimeout(() => richEditorRef.current?.setContentHTML(parsedDraft.content || ''), 100);
           }
         } catch (error) {
           console.log("Draft load error", error);
@@ -98,7 +107,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
     return () => subscription.remove();
   }, [title, content, folder, noteColor, doodle, placedItems]);
 
-
   const addPlacedItem = (type, contentOrColor) => {
     const newItem = {
       id: Date.now().toString(),
@@ -113,18 +121,12 @@ export default function NoteScreen({ note, onSave, onBack }) {
     setPlacedItems(placedItems.filter(item => item.id !== id));
   };
 
+  // 🚀 NAYA: "Mark" function now natively highlights Rich Text!
   const applyHighlight = () => {
-    if (selection.start !== selection.end) {
-      const selectedText = content.substring(selection.start, selection.end);
-      const textBefore = content.substring(0, selection.start);
-      const textAfter = content.substring(selection.end);
-      const highlightedText = textBefore + `【${selectedText}】` + textAfter;
-      setContent(highlightedText);
-    } else {
-      Alert.alert('Pro Tip 💡', 'Please select some text first, then tap Mark!');
-    }
+    richEditorRef.current?.sendAction('hiliteColor', 'result', '#FDFD96');
   };
 
+  // (Kept per strict instructions)
   const renderHighlightedText = () => {
     const parts = content.split(/(【.*?】)/g);
     return parts.map((part, i) => {
@@ -139,6 +141,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
     });
   };
 
+  // (Kept per strict instructions)
   const convertHighlightsToHtml = (rawText) => {
     const escaped = rawText
       .replace(/&/g, '&amp;')
@@ -199,7 +202,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
       return;
     }
     try {
-      const bodyHtml = convertHighlightsToHtml(content);
+      // Content is now HTML natively, so we just use it directly!
+      const bodyHtml = content; 
       const hasAttachments = doodle || placedItems.length > 0;
 
       const doodleSection = doodle
@@ -287,22 +291,29 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // 🚀 NAYA: The Bulletproof Offline Guard for AI Spark
   const handleAiAction = async (actionId) => {
     setShowAiModal(false); 
     
-    if (!content || content.trim().length < 20) {
+    // Check clean text length (strip HTML tags)
+    const plainText = content.replace(/<[^>]+>/g, '');
+    if (!plainText || plainText.trim().length < 20) {
       Alert.alert('Oops!', 'Please write at least 20 characters so AI has something to read! ✍️');
       return;
     }
 
     setIsAiThinking(true);
-    setContent(prev => prev + '\n\n✨ [Lumina AI is thinking...]');
+    
+    // Insert "Thinking" placeholder safely into RichEditor
+    const thinkingText = '<p id="ai-thinking" style="color:#B5838D;"><em>✨ [Lumina AI is thinking...]</em></p>';
+    setContent(prev => {
+      const newHtml = prev + thinkingText;
+      richEditorRef.current?.setContentHTML(newHtml);
+      return newHtml;
+    });
 
     try {
-      const smartPrompt = `Act as an expert study assistant. The user wants you to perform this action: "${actionId}". \n\nHere are the user's notes:\n\n${content}\n\nPlease provide a helpful, clean, and aesthetic response.`;
+      const smartPrompt = `Act as an expert study assistant. The user wants you to perform this action: "${actionId}". \n\nHere are the user's notes:\n\n${plainText}\n\nPlease provide a helpful, clean, and aesthetic response.`;
 
-      // Timeout Logic: Agar 12 second mein reply nahi aaya (offline), toh error dega
       const fetchPromise = supabase.functions.invoke('ask-gemini', {
         body: { prompt: smartPrompt }
       });
@@ -320,15 +331,25 @@ export default function NoteScreen({ note, onSave, onBack }) {
       const result = data?.reply || data?.text || data?.answer || data?.response || "Lumina AI is speechless!";
        
       setContent(prev => {
-        const cleanContent = prev.replace('\n\n✨ [Lumina AI is thinking...]', '');
-        return cleanContent + '\n\n' + '════ ⋆★⋆ ════\n\n' + result + '\n\n════ ⋆★⋆ ════';
+        // Remove thinking placeholder and append AI Result
+        const safePrev = prev || "";
+        const cleanContent = safePrev.replace('<p id="ai-thinking" style="color:#B5838D;"><em>✨ [Lumina AI is thinking...]</em></p>', '');
+        const formattedResult = result.replace(/\n/g, '<br>');
+        const updatedHTML = cleanContent + '<br><br><hr style="border:none;border-top:1px dashed #B5838D;" /><br><b>✨ AI Spark:</b><br>' + formattedResult + '<br><br><hr style="border:none;border-top:1px dashed #B5838D;" /><br>';
+        
+        // Sync Editor visually
+        richEditorRef.current?.setContentHTML(updatedHTML);
+        return updatedHTML;
       });
       
     } catch (error) {
-      // Clean up the thinking text
-      setContent(prev => prev.replace('\n\n✨ [Lumina AI is thinking...]', ''));
+      // Clean up the thinking text on Error
+      setContent(prev => {
+        const cleaned = (prev || "").replace('<p id="ai-thinking" style="color:#B5838D;"><em>✨ [Lumina AI is thinking...]</em></p>', '');
+        richEditorRef.current?.setContentHTML(cleaned);
+        return cleaned;
+      });
       
-      // Friendly Offline/Error Alert
       if (error.message === 'Timeout' || error.message.includes('Network') || error.message.includes('Failed to fetch')) {
         Alert.alert('No Internet 📶', 'Lumina AI needs an active internet connection. Please check your network and try again!');
       } else {
@@ -372,6 +393,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
         multiline
       />
       
+      {/* Toolboxes */}
       <View style={styles.toolboxBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
           <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}>
@@ -409,6 +431,16 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </ScrollView>
       </View>
 
+      {/* 🚀 NAYA: WYSIWYG Formatting Toolbar */}
+      <RichToolbar
+        editor={richEditorRef}
+        actions={[actions.setBold, actions.setItalic, actions.setUnderline, actions.heading1, actions.insertBulletsList, actions.blockquote, actions.undo, actions.redo]}
+        iconTint="#A09E9F"
+        selectedIconTint="#B5838D"
+        style={styles.richBar}
+        flatContainerStyle={styles.richBarFlat}
+      />
+
       <View style={styles.masterCanvasWrapper}>
         <ScrollView 
           style={{ flex: 1 }} 
@@ -418,20 +450,32 @@ export default function NoteScreen({ note, onSave, onBack }) {
         >
           <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
             
+            {/* The aesthetic ruled lines sitting perfectly beneath the text */}
             <View style={styles.ruledLinesContainer} pointerEvents="none">
                {[...Array(150)].map((_, i) => (
                  <View key={i} style={styles.ruledLine} />
                ))}
             </View>
             
-            <TextInput 
-              style={styles.contentInput} 
-              multiline 
-              scrollEnabled={false}
-              placeholder="Start typing your aesthetic notes here...\n\n(Select text and tap 'Mark' to highlight)" 
-              value={content} 
-              onChangeText={setContent} 
-              onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
+            {/* 🚀 NAYA: True Rich Text Editor */}
+            <RichEditor
+              ref={richEditorRef}
+              initialContentHTML={content}
+              onChange={setContent}
+              placeholder="Start typing your aesthetic notes here..."
+              style={styles.richEditor}
+              editorStyle={{
+                backgroundColor: 'transparent', // Transparent to show ruled lines underneath!
+                color: '#2D2A2E',
+                placeholderColor: '#A09E9F',
+                cssText: `
+                  body { font-family: -apple-system, 'Georgia', serif; font-size: 17px; line-height: 35px; margin: 0; padding: 0; }
+                  h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; line-height: 35px; }
+                  ul { margin: 0; padding-left: 20px; line-height: 35px; }
+                  blockquote { border-left: 3px solid #B5838D; padding-left: 10px; color: #6E6B70; font-style: italic; margin: 0; }
+                `
+              }}
+              useContainer={true}
             />
             
             {doodle && (
@@ -509,7 +553,7 @@ const styles = StyleSheet.create({
   folderInput: { fontSize: 14, color: '#8A8788', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
   titleInput: { fontSize: 28, fontWeight: '800', color: '#2D2A2E', marginBottom: 15, lineHeight: 32 },
   
-  toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
+  toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
   
   aiBtn: { backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
   aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
@@ -529,12 +573,16 @@ const styles = StyleSheet.create({
   verticalDivider: { width: 1, height: 25, backgroundColor: '#EAE6E1', marginHorizontal: 10 },
   drawBtn: { backgroundColor: '#E6E6FA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 5 },
   drawBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
+
+  // 🚀 NAYA: WYSIWYG Toolbar Styling
+  richBar: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomWidth: 1, borderBottomColor: '#EAE6E1', paddingVertical: 2 },
+  richBarFlat: { paddingHorizontal: 10, gap: 5 },
+  richEditor: { flex: 1, minHeight: height * 0.6, zIndex: 1 },
   
-  masterCanvasWrapper: { flex: 1, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#EAE6E1', overflow: 'hidden', backgroundColor: '#FFF' }, 
+  masterCanvasWrapper: { flex: 1, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, marginBottom: 15, borderWidth: 1, borderTopWidth: 0, borderColor: '#EAE6E1', overflow: 'hidden', backgroundColor: '#FFF' }, 
   noteContainer: { minHeight: height * 0.6, paddingHorizontal: 15, paddingTop: 10, paddingBottom: 50, overflow: 'hidden' }, 
   ruledLinesContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, paddingTop: 30 },
   ruledLine: { height: 35, borderBottomWidth: 1, borderBottomColor: 'rgba(160, 158, 159, 0.2)' },
-  contentInput: { fontSize: 17, lineHeight: 35, color: '#2D2A2E', textAlignVertical: 'top', zIndex: 1 },
   highlightedText: { backgroundColor: '#FDFD96', fontWeight: '600' }, 
   
   doodlePreview: { height: 180, width: '100%', marginTop: 20, borderRadius: 8, borderWidth: 1, borderColor: '#EAE6E1', overflow: 'hidden', zIndex: 1, backgroundColor: '#FFF' },
