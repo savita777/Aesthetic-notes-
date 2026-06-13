@@ -19,21 +19,23 @@ import StudygramShareModal from '../components/StudygramShareModal';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 12) / 2;
 
-const SUBJECT_PALETTE = {
-  '📓 Physics':  { spine: '#A8C5DA', bg: '#F0F6FA', emoji: '📓' },
-  '📐 Maths':    { spine: '#B5C9A8', bg: '#F2F7F0', emoji: '📐' },
-  '🧬 Biology':  { spine: '#C5B8DA', bg: '#F5F1FA', emoji: '🧬' },
-  '📝 Journal':  { spine: '#B5838D', bg: '#FDF0F2', emoji: '📝' },
-  '💡 Ideas':    { spine: '#D4B896', bg: '#FAF5EF', emoji: '💡' },
+// 🚀 NAYA: Soft Bento Pastel Palette (Minimalist, No Spines)
+const SUBJECT_BENTO = {
+  '📓 Physics':  { bg: '#E8EEF5', emoji: '📓' },
+  '📐 Maths':    { bg: '#EAF2EA', emoji: '📐' },
+  '🧬 Biology':  { bg: '#EEE8F5', emoji: '🧬' },
+  '📝 Journal':  { bg: '#F5EAF0', emoji: '📝' },
+  '💡 Ideas':    { bg: '#F5F0E8', emoji: '💡' },
 };
-const DEFAULT_PALETTE = { spine: '#C4BDB8', bg: '#F7F4F1', emoji: '📂' };
+const DEFAULT_BENTO = { bg: '#F0EDE8', emoji: '📂' };
 
-function getSubjectPalette(subject) {
-  return SUBJECT_PALETTE[subject] || DEFAULT_PALETTE;
+function getBentoPalette(subject) {
+  return SUBJECT_BENTO[subject] || DEFAULT_BENTO;
 }
 
+// 🚀 NAYA: Soft Bento Collection Card
 function CollectionCard({ subject, count, isActive, onPress }) {
-  const palette = getSubjectPalette(subject);
+  const palette = getBentoPalette(subject);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () =>
@@ -46,47 +48,39 @@ function CollectionCard({ subject, count, isActive, onPress }) {
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <TouchableOpacity
-        activeOpacity={1}
+        activeOpacity={0.8}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={onPress}
         style={[
-          styles.collectionCard,
+          styles.bentoCard,
           { backgroundColor: palette.bg },
-          isActive && styles.collectionCardActive,
+          isActive && styles.bentoCardActive,
         ]}
       >
-        <View style={[styles.collectionSpine, { backgroundColor: palette.spine }]}>
-          <Text style={styles.spineLabel} numberOfLines={4}>
-            {labelText.toUpperCase()}
-          </Text>
-        </View>
+        {/* Ghost Watermark Emoji */}
+        <Text style={styles.bentoWatermark}>{palette.emoji}</Text>
 
-        <View style={styles.collectionBody}>
-          <View style={styles.ruledLines}>
-            <View style={styles.ruledLine} />
-            <View style={styles.ruledLine} />
-            <View style={styles.ruledLine} />
-          </View>
+        <View style={styles.bentoInner}>
+          <Text style={styles.bentoEmoji}>{palette.emoji}</Text>
 
-          <Text style={styles.collectionEmoji}>{palette.emoji}</Text>
-
-          <View style={styles.collectionMeta}>
-            <Text style={styles.collectionSubjectName} numberOfLines={1}>
+          <View style={styles.bentoMeta}>
+            <Text style={styles.bentoSubjectName} numberOfLines={1}>
               {labelText}
             </Text>
-            <Text style={styles.collectionNoteCount}>
+            <Text style={styles.bentoNoteCount}>
               {count} {count === 1 ? 'note' : 'notes'}
             </Text>
           </View>
 
-          {isActive && <View style={[styles.activeDot, { backgroundColor: palette.spine }]} />}
+          {isActive && <View style={styles.bentoActiveDot} />}
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
+// (UNCHANGED: Purana Notebook Design)
 function NoteCard({ item, onPress }) {
   return (
     <TouchableOpacity
@@ -127,6 +121,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
+  // Keep existing filter logic exactly same
   const filteredNotes = notes.filter(n => {
     const matchesSubject = activeSubject === 'All Notes' ? true : n.folder === activeSubject;
     const query = searchQuery.toLowerCase().trim();
@@ -160,17 +155,15 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
     );
   };
 
-  const ListHeader = () => (
-    <>
+  // 🚀 NAYA: Search aur Header ko FlatList se bahar nikal diya hai (Keyboard fix)
+  const renderStaticHeader = () => (
+    <View style={styles.staticHeader}>
       <View style={styles.header}>
         <View>
           <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
           <Text style={styles.headerTitle}>My Study Space</Text>
         </View>
-        <TouchableOpacity
-          style={styles.shareIconBtn}
-          onPress={() => setShowShareModal(true)}
-        >
+        <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
           <Text style={styles.shareIconText}>📸 Share</Text>
         </TouchableOpacity>
       </View>
@@ -185,17 +178,20 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
           onChangeText={setSearchQuery}
           returnKeyType="search"
           onSubmitEditing={() => Keyboard.dismiss()}
+          autoCorrect={false} // Typing experience smooth karne ke liye
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }}
-            style={styles.clearSearchBtn}
-          >
+          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={styles.clearSearchBtn}>
             <Text style={styles.clearSearchText}>✕</Text>
           </TouchableOpacity>
         )}
       </View>
+    </View>
+  );
 
+  // Yeh hissa scroll hoga but search bar disturb nahi hoga
+  const renderScrollableHeader = () => (
+    <View style={{ paddingTop: 10 }}>
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
@@ -213,23 +209,21 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
       </View>
 
       <View style={styles.collectionsGrid}>
+        {/* Soft Bento 'All Notes' Card */}
         <TouchableOpacity
-          style={[
-            styles.allNotesCard,
-            activeSubject === 'All Notes' && styles.allNotesCardActive,
-          ]}
+          style={[styles.allNotesBento, activeSubject === 'All Notes' && styles.bentoCardActive]}
           onPress={() => setActiveSubject('All Notes')}
-          activeOpacity={0.85}
+          activeOpacity={0.8}
         >
-          <View style={[styles.allNotesSpine, activeSubject === 'All Notes' && styles.allNotesSpineActive]} />
-          <View style={styles.allNotesBody}>
+          <Text style={styles.bentoWatermark}>🗂</Text>
+          <View style={styles.allNotesInner}>
             <Text style={styles.allNotesEmoji}>🗂</Text>
             <View>
-              <Text style={styles.allNotesTitle}>All Notes</Text>
-              <Text style={styles.allNotesCount}>{notes.length} notes across all vaults</Text>
+              <Text style={styles.bentoSubjectName}>All Notes</Text>
+              <Text style={styles.bentoNoteCount}>{notes.length} notes across all vaults</Text>
             </View>
           </View>
-          {activeSubject === 'All Notes' && <View style={styles.allNotesActiveDot} />}
+          {activeSubject === 'All Notes' && <View style={styles.bentoActiveDot} />}
         </TouchableOpacity>
 
         <View style={styles.collectionsRow}>
@@ -246,13 +240,15 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
       </View>
 
       <View style={styles.divider} />
-
       {recentHeader()}
-    </>
+    </View>
   );
 
   return (
     <View style={styles.container}>
+      {/* 🚀 Keyboard Fix: Header humesha top par rahega */}
+      {renderStaticHeader()}
+
       {filteredNotes.length === 0 ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -260,7 +256,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
           keyboardDismissMode="on-drag"
           contentContainerStyle={{ paddingBottom: 120 }}
         >
-          <ListHeader />
+          {renderScrollableHeader()}
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🪹</Text>
             <Text style={styles.emptyText}>
@@ -281,7 +277,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
             <NoteCard item={item} onPress={onSelectNote} />
           )}
           numColumns={2}
-          ListHeaderComponent={<ListHeader />}
+          ListHeaderComponent={renderScrollableHeader()}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -293,10 +289,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
         <Text style={styles.fabText}>✏️</Text>
       </TouchableOpacity>
 
-      <StudygramShareModal
-        visible={showShareModal}
-        onClose={() => setShowShareModal(false)}
-      />
+      <StudygramShareModal visible={showShareModal} onClose={() => setShowShareModal(false)} />
     </View>
   );
 }
@@ -305,7 +298,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FDFBF7',
+  },
+  // 🚀 NAYA: Static Header Container
+  staticHeader: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
+    backgroundColor: '#FDFBF7',
+    paddingBottom: 4,
+    zIndex: 10, 
   },
   header: {
     flexDirection: 'row',
@@ -347,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 4,
     borderRadius: 16,
     paddingHorizontal: 15,
     height: 52,
@@ -404,141 +403,81 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 8,
   },
-  allNotesCard: {
+
+  // 🚀 NAYA: Soft Bento Styles
+  allNotesBento: {
     width: '100%',
-    height: 68,
-    backgroundColor: '#F7F4F1',
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    height: 72,
+    backgroundColor: '#F0EDE8',
+    borderRadius: 20,
     marginBottom: 12,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    borderWidth: 1,
-    borderColor: '#EDE8E0',
+    justifyContent: 'center',
   },
-  allNotesCardActive: {
-    borderColor: '#B5838D',
-    borderWidth: 1.5,
-  },
-  allNotesSpine: {
-    width: 6,
-    height: '100%',
-    backgroundColor: '#C4BDB8',
-  },
-  allNotesSpineActive: {
-    backgroundColor: '#B5838D',
-  },
-  allNotesBody: {
-    flex: 1,
+  allNotesInner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     gap: 12,
   },
-  allNotesEmoji: { fontSize: 26 },
-  allNotesTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2D2A2E',
-    marginBottom: 2,
-  },
-  allNotesCount: {
-    fontSize: 12,
-    color: '#A09E9F',
-    fontWeight: '500',
-  },
-  allNotesActiveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#B5838D',
-    marginRight: 16,
-  },
+  allNotesEmoji: { fontSize: 28 },
   collectionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  collectionCard: {
+  bentoCard: {
     width: CARD_WIDTH,
-    height: 148,
-    borderRadius: 16,
-    flexDirection: 'row',
+    height: CARD_WIDTH * 0.85,
+    borderRadius: 24,
     overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
   },
-  collectionCardActive: {
+  bentoCardActive: {
     borderWidth: 1.5,
     borderColor: '#B5838D',
-    elevation: 4,
-    shadowOpacity: 0.12,
   },
-  collectionSpine: {
-    width: 22,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 10,
+  bentoWatermark: {
+    position: 'absolute',
+    right: -10,
+    bottom: -15,
+    fontSize: 80,
+    opacity: 0.05,
+    zIndex: 0,
   },
-  spineLabel: {
-    fontSize: 7,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.85)',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-    transform: [{ rotate: '180deg' }],
-  },
-  collectionBody: {
+  bentoInner: {
     flex: 1,
-    padding: 12,
+    padding: 16,
     justifyContent: 'space-between',
+    zIndex: 1,
   },
-  ruledLines: {
-    gap: 5,
-    marginBottom: 4,
+  bentoEmoji: {
+    fontSize: 28,
   },
-  ruledLine: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    borderRadius: 1,
-  },
-  collectionEmoji: {
-    fontSize: 30,
-    marginBottom: 6,
-  },
-  collectionMeta: {
+  bentoMeta: {
     gap: 2,
   },
-  collectionSubjectName: {
-    fontSize: 14,
+  bentoSubjectName: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#2D2A2E',
     letterSpacing: -0.2,
   },
-  collectionNoteCount: {
-    fontSize: 11,
+  bentoNoteCount: {
+    fontSize: 12,
     color: '#A09E9F',
     fontWeight: '500',
   },
-  activeDot: {
+  bentoActiveDot: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 14,
+    right: 14,
     width: 8,
     height: 8,
     borderRadius: 4,
+    backgroundColor: '#B5838D',
+    zIndex: 2,
   },
+
   divider: {
     height: 1,
     backgroundColor: '#EDE8E0',
@@ -550,6 +489,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 120,
   },
+
+  // (UNCHANGED) NoteCard Styles
   notebookCard: {
     flex: 0.5,
     margin: 6,
@@ -661,4 +602,4 @@ const styles = StyleSheet.create({
   },
   fabText: { fontSize: 26, marginLeft: 2 },
 });
-            
+          
