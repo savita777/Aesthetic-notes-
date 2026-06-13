@@ -19,6 +19,8 @@
     "@google/generative-ai": "*",
     "react-native-url-polyfill": "*",
     "@supabase/supabase-js": "^2.43.0",
-    "expo-local-authentication": "~14.0.1"
+    "expo-local-authentication": "~14.0.1",
+    "react-native-webview": "13.8.6",
+    "react-native-pell-rich-editor": "1.9.0"
   }
 }
