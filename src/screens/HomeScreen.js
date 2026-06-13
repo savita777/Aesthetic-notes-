@@ -17,29 +17,29 @@ import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 12) / 2;
+const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 14) / 2;
 
-// 🚀 NAYA: Soft Bento Pastel Palette (Minimalist, No Spines)
-const SUBJECT_BENTO = {
-  '📓 Physics':  { bg: '#E8EEF5', emoji: '📓' },
-  '📐 Maths':    { bg: '#EAF2EA', emoji: '📐' },
-  '🧬 Biology':  { bg: '#EEE8F5', emoji: '🧬' },
-  '📝 Journal':  { bg: '#F5EAF0', emoji: '📝' },
-  '💡 Ideas':    { bg: '#F5F0E8', emoji: '💡' },
+// 🚀 NAYA: Premium Frosted Glass Colors (Apple iOS Style)
+const SUBJECT_GLASS = {
+  '📓 Physics':  { tint: '#E3EDF4', emoji: '📓' },
+  '📐 Maths':    { tint: '#E5EFE4', emoji: '📐' },
+  '🧬 Biology':  { tint: '#EDE7F4', emoji: '🧬' },
+  '📝 Journal':  { tint: '#F6E4E7', emoji: '📝' },
+  '💡 Ideas':    { tint: '#F4EBE0', emoji: '💡' },
 };
-const DEFAULT_BENTO = { bg: '#F0EDE8', emoji: '📂' };
+const DEFAULT_GLASS = { tint: '#EAEAEA', emoji: '📂' };
 
-function getBentoPalette(subject) {
-  return SUBJECT_BENTO[subject] || DEFAULT_BENTO;
+function getGlassPalette(subject) {
+  return SUBJECT_GLASS[subject] || DEFAULT_GLASS;
 }
 
-// 🚀 NAYA: Soft Bento Collection Card
+// 🚀 NAYA: Frosted Glass Collection Card
 function CollectionCard({ subject, count, isActive, onPress }) {
-  const palette = getBentoPalette(subject);
+  const palette = getGlassPalette(subject);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () =>
-    Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, speed: 40 }).start();
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 40 }).start();
   const handlePressOut = () =>
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
@@ -53,34 +53,31 @@ function CollectionCard({ subject, count, isActive, onPress }) {
         onPressOut={handlePressOut}
         onPress={onPress}
         style={[
-          styles.bentoCard,
-          { backgroundColor: palette.bg },
-          isActive && styles.bentoCardActive,
+          styles.glassCard,
+          { backgroundColor: palette.tint }, // Soft pastel tint
+          isActive && styles.glassCardActive,
         ]}
       >
-        {/* Ghost Watermark Emoji */}
-        <Text style={styles.bentoWatermark}>{palette.emoji}</Text>
+        <View style={styles.glassInner}>
+          <Text style={styles.glassEmoji}>{palette.emoji}</Text>
 
-        <View style={styles.bentoInner}>
-          <Text style={styles.bentoEmoji}>{palette.emoji}</Text>
-
-          <View style={styles.bentoMeta}>
-            <Text style={styles.bentoSubjectName} numberOfLines={1}>
+          <View style={styles.glassMeta}>
+            <Text style={styles.glassSubjectName} numberOfLines={1}>
               {labelText}
             </Text>
-            <Text style={styles.bentoNoteCount}>
+            <Text style={styles.glassNoteCount}>
               {count} {count === 1 ? 'note' : 'notes'}
             </Text>
           </View>
 
-          {isActive && <View style={styles.bentoActiveDot} />}
+          {isActive && <View style={styles.activeDot} />}
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-// (UNCHANGED: Purana Notebook Design)
+// 📓 UNCHANGED: The Notebook Note Card
 function NoteCard({ item, onPress }) {
   return (
     <TouchableOpacity
@@ -114,14 +111,14 @@ function NoteCard({ item, onPress }) {
   );
 }
 
-export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
+// 🚀 NAYA: onLogout added to props
+export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
   const [searchQuery, setSearchQuery] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
 
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
-  // Keep existing filter logic exactly same
   const filteredNotes = notes.filter(n => {
     const matchesSubject = activeSubject === 'All Notes' ? true : n.folder === activeSubject;
     const query = searchQuery.toLowerCase().trim();
@@ -155,7 +152,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
     );
   };
 
-  // 🚀 NAYA: Search aur Header ko FlatList se bahar nikal diya hai (Keyboard fix)
+  // 🚀 NAYA: The Static Header (Keeps Keyboard from Dismissing!)
   const renderStaticHeader = () => (
     <View style={styles.staticHeader}>
       <View style={styles.header}>
@@ -163,22 +160,29 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
           <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
           <Text style={styles.headerTitle}>My Study Space</Text>
         </View>
-        <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
-          <Text style={styles.shareIconText}>📸 Share</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
+            <Text style={styles.shareIconText}>📸</Text>
+          </TouchableOpacity>
+          {/* 🚀 NAYA: Logout Button */}
+          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+            <Text style={styles.logoutBtnText}>🚪</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Floating Search Bar */}
       <View style={styles.searchContainer}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search notes, topics, or keywords..."
+          placeholder="Search notes, topics..."
           placeholderTextColor="#A09E9F"
           value={searchQuery}
           onChangeText={setSearchQuery}
           returnKeyType="search"
           onSubmitEditing={() => Keyboard.dismiss()}
-          autoCorrect={false} // Typing experience smooth karne ke liye
+          autoCorrect={false}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={styles.clearSearchBtn}>
@@ -189,9 +193,8 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
     </View>
   );
 
-  // Yeh hissa scroll hoga but search bar disturb nahi hoga
   const renderScrollableHeader = () => (
-    <View style={{ paddingTop: 10 }}>
+    <View style={{ paddingTop: 6 }}>
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
@@ -209,21 +212,20 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
       </View>
 
       <View style={styles.collectionsGrid}>
-        {/* Soft Bento 'All Notes' Card */}
+        {/* The 'All Notes' Glass Card */}
         <TouchableOpacity
-          style={[styles.allNotesBento, activeSubject === 'All Notes' && styles.bentoCardActive]}
+          style={[styles.glassCardWide, activeSubject === 'All Notes' && styles.glassCardActive]}
           onPress={() => setActiveSubject('All Notes')}
           activeOpacity={0.8}
         >
-          <Text style={styles.bentoWatermark}>🗂</Text>
-          <View style={styles.allNotesInner}>
-            <Text style={styles.allNotesEmoji}>🗂</Text>
+          <View style={styles.glassInnerWide}>
+            <Text style={styles.glassEmojiWide}>🗂</Text>
             <View>
-              <Text style={styles.bentoSubjectName}>All Notes</Text>
-              <Text style={styles.bentoNoteCount}>{notes.length} notes across all vaults</Text>
+              <Text style={styles.glassSubjectName}>All Notes</Text>
+              <Text style={styles.glassNoteCount}>{notes.length} notes across all vaults</Text>
             </View>
           </View>
-          {activeSubject === 'All Notes' && <View style={styles.bentoActiveDot} />}
+          {activeSubject === 'All Notes' && <View style={styles.activeDot} />}
         </TouchableOpacity>
 
         <View style={styles.collectionsRow}>
@@ -246,7 +248,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 
   return (
     <View style={styles.container}>
-      {/* 🚀 Keyboard Fix: Header humesha top par rahega */}
+      {/* 🚀 Static Header outside the ScrollView fixes the Keyboard Bug! */}
       {renderStaticHeader()}
 
       {filteredNotes.length === 0 ? (
@@ -297,13 +299,12 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDFBF7',
+    backgroundColor: '#F8F6F2', // Premium Alabaster Background
   },
-  // 🚀 NAYA: Static Header Container
   staticHeader: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
-    backgroundColor: '#FDFBF7',
-    paddingBottom: 4,
+    backgroundColor: '#F8F6F2',
+    paddingBottom: 10,
     zIndex: 10, 
   },
   header: {
@@ -311,12 +312,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   greetingText: {
-    fontSize: 15,
-    color: '#A09E9F',
-    fontWeight: '600',
+    fontSize: 14,
+    color: '#8A8788',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
   headerTitle: {
@@ -325,53 +328,68 @@ const styles = StyleSheet.create({
     color: '#2D2A2E',
     letterSpacing: -0.5,
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   shareIconBtn: {
-    backgroundColor: '#FFB3BA',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    backgroundColor: '#FFFFFF',
+    padding: 12,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
+  },
+  shareIconText: { fontSize: 16 },
+  logoutBtn: {
+    backgroundColor: '#FFF0F3', // Soft red background for logout
+    padding: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 179, 186, 0.4)',
     shadowColor: '#FFB3BA',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  shareIconText: {
-    color: '#2D2A2E',
-    fontWeight: '700',
-    fontSize: 12,
-  },
+  logoutBtnText: { fontSize: 16 },
+  
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginBottom: 4,
-    borderRadius: 16,
-    paddingHorizontal: 15,
-    height: 52,
-    borderWidth: 1,
-    borderColor: '#EAE6E1',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    height: 54,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  searchIcon: { fontSize: 16, marginRight: 10 },
-  searchInput: { flex: 1, fontSize: 15, color: '#2D2A2E', height: '100%' },
+  searchIcon: { fontSize: 18, marginRight: 10 },
+  searchInput: { flex: 1, fontSize: 16, color: '#2D2A2E', height: '100%' },
   clearSearchBtn: {
     padding: 5,
     backgroundColor: '#F0EDE8',
     borderRadius: 12,
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clearSearchText: { fontSize: 10, color: '#8A8788', fontWeight: '900' },
+  clearSearchText: { fontSize: 11, color: '#8A8788', fontWeight: '900' },
+  
   widgetContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
     width: '100%',
     alignItems: 'center',
   },
@@ -383,114 +401,118 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#2D2A2E',
     letterSpacing: -0.3,
     marginBottom: 2,
   },
   sectionSubtitle: {
-    fontSize: 12,
-    color: '#A09E9F',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#8A8788',
+    fontWeight: '600',
   },
   seeAllText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#B5838D',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   collectionsGrid: {
     paddingHorizontal: 20,
     marginBottom: 8,
   },
 
-  // 🚀 NAYA: Soft Bento Styles
-  allNotesBento: {
+  // 🚀 NAYA: Premium Frosted Glass CSS
+  glassCardWide: {
     width: '100%',
-    height: 72,
-    backgroundColor: '#F0EDE8',
-    borderRadius: 20,
-    marginBottom: 12,
-    overflow: 'hidden',
+    height: 76,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 24,
+    marginBottom: 14,
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  allNotesInner: {
+  glassInnerWide: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: 18,
+    gap: 14,
   },
-  allNotesEmoji: { fontSize: 28 },
+  glassEmojiWide: { fontSize: 32 },
   collectionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 14,
   },
-  bentoCard: {
+  glassCard: {
     width: CARD_WIDTH,
-    height: CARD_WIDTH * 0.85,
+    height: CARD_WIDTH * 0.9,
     borderRadius: 24,
-    overflow: 'hidden',
-  },
-  bentoCardActive: {
     borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  glassCardActive: {
     borderColor: '#B5838D',
+    borderWidth: 1.5,
   },
-  bentoWatermark: {
-    position: 'absolute',
-    right: -10,
-    bottom: -15,
-    fontSize: 80,
-    opacity: 0.05,
-    zIndex: 0,
-  },
-  bentoInner: {
+  glassInner: {
     flex: 1,
     padding: 16,
     justifyContent: 'space-between',
-    zIndex: 1,
   },
-  bentoEmoji: {
-    fontSize: 28,
+  glassEmoji: {
+    fontSize: 32,
   },
-  bentoMeta: {
-    gap: 2,
+  glassMeta: {
+    gap: 4,
   },
-  bentoSubjectName: {
-    fontSize: 15,
-    fontWeight: '700',
+  glassSubjectName: {
+    fontSize: 16,
+    fontWeight: '800',
     color: '#2D2A2E',
     letterSpacing: -0.2,
   },
-  bentoNoteCount: {
+  glassNoteCount: {
     fontSize: 12,
-    color: '#A09E9F',
-    fontWeight: '500',
+    color: '#8A8788',
+    fontWeight: '600',
   },
-  bentoActiveDot: {
+  activeDot: {
     position: 'absolute',
-    top: 14,
-    right: 14,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 16,
+    right: 16,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#B5838D',
-    zIndex: 2,
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
 
   divider: {
     height: 1,
-    backgroundColor: '#EDE8E0',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     marginHorizontal: 20,
-    marginTop: 4,
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 24,
   },
   listContainer: {
     paddingHorizontal: 12,
     paddingBottom: 120,
   },
 
-  // (UNCHANGED) NoteCard Styles
+  // 📓 UNCHANGED: NoteCard Styles
   notebookCard: {
     flex: 0.5,
     margin: 6,
@@ -580,7 +602,7 @@ const styles = StyleSheet.create({
   },
   emptySubText: {
     fontSize: 14,
-    color: '#A09E9F',
+    color: '#8A8788',
     textAlign: 'center',
     lineHeight: 20,
   },
