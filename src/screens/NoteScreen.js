@@ -4,8 +4,9 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system'; // 🚀 NAYA: Image ko PDF ke liye convert karne ke liye
 
-// 🚀 NAYA: True Rich Text Engine Imports
+// True Rich Text Engine Imports
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 
 import { Colors } from '../theme/colors';
@@ -35,7 +36,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
   const noteViewShotRef = useRef();
   const autoSaveTimer = useRef(null);
   
-  // 🚀 NAYA: RichEditor Reference
   const richEditorRef = useRef(null);
 
   const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
@@ -50,7 +50,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
       setFolder(note.folder || '');
       setDoodle(note.doodle || null);
       setPlacedItems(note.placedItems || []);
-      // Sync RichEditor on load
       setTimeout(() => richEditorRef.current?.setContentHTML(note.content), 100);
     } else {
       const loadDraft = async () => {
@@ -65,7 +64,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
             if (parsedDraft.doodle) setDoodle(parsedDraft.doodle);
             if (parsedDraft.placedItems) setPlacedItems(parsedDraft.placedItems);
             console.log("✅ Purana Data (Draft) Wapas Aa Gaya!");
-            // Sync RichEditor with Draft
             setTimeout(() => richEditorRef.current?.setContentHTML(parsedDraft.content || ''), 100);
           }
         } catch (error) {
@@ -76,7 +74,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   }, [note]);
 
-  // Draft Save Karne ka function
   const saveDraftLocally = async () => {
     try {
       const draftData = { title, content, folder, noteColor, doodle, placedItems, timestamp: Date.now() };
@@ -86,18 +83,14 @@ export default function NoteScreen({ note, onSave, onBack }) {
     }
   };
 
-  // DEBOUNCE LOGIC (5 sec baad save)
   useEffect(() => {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    
     autoSaveTimer.current = setTimeout(() => {
       if (title || content) saveDraftLocally();
     }, 5000);
-
     return () => clearTimeout(autoSaveTimer.current);
   }, [title, content, folder, noteColor, doodle, placedItems]);
 
-  // APP-STATE LOGIC (Minimize hone par save)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
@@ -107,13 +100,35 @@ export default function NoteScreen({ note, onSave, onBack }) {
     return () => subscription.remove();
   }, [title, content, folder, noteColor, doodle, placedItems]);
 
+  // 🚀 NAYA: DELETE NOTE FUNCTION
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Note",
+      "Are you sure you want to permanently delete this note? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            if (note?.id) {
+              try {
+                await supabase.from('notes').delete().eq('id', note.id);
+                console.log("✅ Cloud se delete ho gaya");
+              } catch (e) {
+                console.log("Cloud delete error", e);
+              }
+            }
+            await AsyncStorage.removeItem('@lumina_draft');
+            onBack(); // Wapas Home Screen par le jayega
+          } 
+        }
+      ]
+    );
+  };
+
   const addPlacedItem = (type, contentOrColor) => {
-    const newItem = {
-      id: Date.now().toString(),
-      type: type,
-      content: type === 'emoji' ? contentOrColor : null,
-      color: type === 'washi' ? contentOrColor : null,
-    };
+    const newItem = { id: Date.now().toString(), type: type, content: type === 'emoji' ? contentOrColor : null, color: type === 'washi' ? contentOrColor : null };
     setPlacedItems([...placedItems, newItem]);
   };
 
@@ -121,37 +136,8 @@ export default function NoteScreen({ note, onSave, onBack }) {
     setPlacedItems(placedItems.filter(item => item.id !== id));
   };
 
-  // 🚀 NAYA: "Mark" function now natively highlights Rich Text!
   const applyHighlight = () => {
     richEditorRef.current?.sendAction('hiliteColor', 'result', '#FDFD96');
-  };
-
-  // (Kept per strict instructions)
-  const renderHighlightedText = () => {
-    const parts = content.split(/(【.*?】)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('【') && part.endsWith('】')) {
-        return (
-          <Text key={i} style={styles.highlightedText}>
-            {part.slice(1, -1)}
-          </Text>
-        );
-      }
-      return <Text key={i}>{part}</Text>;
-    });
-  };
-
-  // (Kept per strict instructions)
-  const convertHighlightsToHtml = (rawText) => {
-    const escaped = rawText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-    return escaped.replace(
-      /【(.*?)】/g,
-      '<mark style="background-color:#FDFD96; padding:0 2px; border-radius:3px;">$1</mark>'
-    );
   };
 
   const generateAestheticPDF = async () => {
@@ -160,11 +146,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
       return;
     }
     try {
-      const uri = await noteViewShotRef.current.capture({
-        format: 'png',
-        quality: 1,
-      });
-
+      const uri = await noteViewShotRef.current.capture({ format: 'png', quality: 1 });
       const htmlContent = `
         <html>
           <head>
@@ -188,7 +170,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
           </body>
         </html>
       `;
-
       const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(pdfUri);
     } catch (error) {
@@ -202,16 +183,23 @@ export default function NoteScreen({ note, onSave, onBack }) {
       return;
     }
     try {
-      // Content is now HTML natively, so we just use it directly!
       const bodyHtml = content; 
       const hasAttachments = doodle || placedItems.length > 0;
 
-      const doodleSection = doodle
-        ? `<div class="attachment-item">
-             <div class="attachment-label">✏️ Doodle / Sketch</div>
-             <img src="${doodle}" class="attachment-img" />
-           </div>`
-        : '';
+      // 🚀 NAYA: Convert local Doodle URI to Base64 to render safely in PDF
+      let doodleSection = '';
+      if (doodle) {
+        try {
+          const base64Str = await FileSystem.readAsStringAsync(doodle, { encoding: FileSystem.EncodingType.Base64 });
+          const doodleBase64 = `data:image/png;base64,${base64Str}`;
+          doodleSection = `<div class="attachment-item">
+               <div class="attachment-label">✏️ Doodle / Sketch</div>
+               <img src="${doodleBase64}" class="attachment-img" />
+             </div>`;
+        } catch (e) {
+          console.log("Error converting doodle to base64", e);
+        }
+      }
 
       const emojiItems = placedItems.filter((i) => i.type === 'emoji');
       const washiItems = placedItems.filter((i) => i.type === 'washi');
@@ -222,8 +210,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
                <div class="sticker-row">
                  ${emojiItems.map((s) => `<span class="sticker-chip">${s.content}</span>`).join('')}
                </div>
-             </div>`
-          : '';
+             </div>` : '';
 
       const washiSection = washiItems.length > 0
           ? `<div class="attachment-item">
@@ -231,8 +218,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
                <div class="sticker-row">
                  ${washiItems.map((w) => `<span class="washi-chip" style="background-color:${w.color};"></span>`).join('')}
                </div>
-             </div>`
-          : '';
+             </div>` : '';
 
       const attachmentsBlock = hasAttachments
         ? `<div class="attachments-section">
@@ -240,8 +226,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
              ${doodleSection}
              ${stickersSection}
              ${washiSection}
-           </div>`
-        : '';
+           </div>` : '';
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -283,7 +268,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
           </body>
         </html>
       `;
-
       const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(pdfUri);
     } catch (error) {
@@ -293,17 +277,12 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
   const handleAiAction = async (actionId) => {
     setShowAiModal(false); 
-    
-    // Check clean text length (strip HTML tags)
     const plainText = content.replace(/<[^>]+>/g, '');
     if (!plainText || plainText.trim().length < 20) {
       Alert.alert('Oops!', 'Please write at least 20 characters so AI has something to read! ✍️');
       return;
     }
-
     setIsAiThinking(true);
-    
-    // Insert "Thinking" placeholder safely into RichEditor
     const thinkingText = '<p id="ai-thinking" style="color:#B5838D;"><em>✨ [Lumina AI is thinking...]</em></p>';
     setContent(prev => {
       const newHtml = prev + thinkingText;
@@ -313,43 +292,26 @@ export default function NoteScreen({ note, onSave, onBack }) {
 
     try {
       const smartPrompt = `Act as an expert study assistant. The user wants you to perform this action: "${actionId}". \n\nHere are the user's notes:\n\n${plainText}\n\nPlease provide a helpful, clean, and aesthetic response.`;
-
-      const fetchPromise = supabase.functions.invoke('ask-gemini', {
-        body: { prompt: smartPrompt }
-      });
-      
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 12000)
-      );
-
+      const fetchPromise = supabase.functions.invoke('ask-gemini', { body: { prompt: smartPrompt } });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 12000));
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
-
-      if (error) {
-        throw new Error(error.message || "Failed to fetch");
-      }
+      if (error) throw new Error(error.message || "Failed to fetch");
       
       const result = data?.reply || data?.text || data?.answer || data?.response || "Lumina AI is speechless!";
-       
       setContent(prev => {
-        // Remove thinking placeholder and append AI Result
         const safePrev = prev || "";
         const cleanContent = safePrev.replace('<p id="ai-thinking" style="color:#B5838D;"><em>✨ [Lumina AI is thinking...]</em></p>', '');
         const formattedResult = result.replace(/\n/g, '<br>');
         const updatedHTML = cleanContent + '<br><br><hr style="border:none;border-top:1px dashed #B5838D;" /><br><b>✨ AI Spark:</b><br>' + formattedResult + '<br><br><hr style="border:none;border-top:1px dashed #B5838D;" /><br>';
-        
-        // Sync Editor visually
         richEditorRef.current?.setContentHTML(updatedHTML);
         return updatedHTML;
       });
-      
     } catch (error) {
-      // Clean up the thinking text on Error
       setContent(prev => {
         const cleaned = (prev || "").replace('<p id="ai-thinking" style="color:#B5838D;"><em>✨ [Lumina AI is thinking...]</em></p>', '');
         richEditorRef.current?.setContentHTML(cleaned);
         return cleaned;
       });
-      
       if (error.message === 'Timeout' || error.message.includes('Network') || error.message.includes('Failed to fetch')) {
         Alert.alert('No Internet 📶', 'Lumina AI needs an active internet connection. Please check your network and try again!');
       } else {
@@ -363,19 +325,27 @@ export default function NoteScreen({ note, onSave, onBack }) {
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // 🚀 NAYA: Changed from undefined to 'height' to push layout up
     >
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
         
-        <TouchableOpacity 
-          style={styles.saveBtn} 
-          onPress={async () => {
-            await AsyncStorage.removeItem('@lumina_draft'); 
-            onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems);
-          }}>
-          <Text style={styles.saveBtnText}>Save Note</Text>
-        </TouchableOpacity>
+        {/* 🚀 NAYA: DELETE & SAVE BUTTON CONTAINER */}
+        <View style={{flexDirection: 'row', gap: 10}}>
+          {note && ( // Show trash only if it's an existing note
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+              <Text style={styles.deleteBtnText}>🗑️</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            style={styles.saveBtn} 
+            onPress={async () => {
+              await AsyncStorage.removeItem('@lumina_draft'); 
+              onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems);
+            }}>
+            <Text style={styles.saveBtnText}>Save</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TextInput 
@@ -393,24 +363,20 @@ export default function NoteScreen({ note, onSave, onBack }) {
         multiline
       />
       
-      {/* Toolboxes */}
       <View style={styles.toolboxBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
           <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}>
             <Text style={styles.aiBtnText}>✨ AI Spark</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
-
           <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}>
             <Text style={styles.pomodoroBtnText}>⏱️ Focus</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
-
           <TouchableOpacity onPress={applyHighlight} style={styles.highlightBtn}>
             <Text style={styles.highlightBtnText}>🖍️ Mark</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
-
           <Text style={styles.toolLabel}>Stickers:</Text>
           {stickersList.map((emoji, index) => (
              <TouchableOpacity key={'stk'+index} onPress={() => addPlacedItem('emoji', emoji)} style={styles.stickerBtn}>
@@ -418,20 +384,17 @@ export default function NoteScreen({ note, onSave, onBack }) {
              </TouchableOpacity>
           ))}
           <View style={styles.verticalDivider} />
-          
           <Text style={styles.toolLabel}>Washi:</Text>
           {washiColors.map((color, index) => (
              <TouchableOpacity key={'wsh'+index} onPress={() => addPlacedItem('washi', color)} style={[styles.washiIcon, {backgroundColor: color}]} />
           ))}
           <View style={styles.verticalDivider} />
-
           <TouchableOpacity onPress={() => setShowDraw(true)} style={styles.drawBtn}>
             <Text style={styles.drawBtnText}>✏️ Draw</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
-      {/* 🚀 NAYA: WYSIWYG Formatting Toolbar */}
       <RichToolbar
         editor={richEditorRef}
         actions={[actions.setBold, actions.setItalic, actions.setUnderline, actions.heading1, actions.insertBulletsList, actions.blockquote, actions.undo, actions.redo]}
@@ -445,19 +408,17 @@ export default function NoteScreen({ note, onSave, onBack }) {
         <ScrollView 
           style={{ flex: 1 }} 
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+          keyboardShouldPersistTaps="handled" // 🚀 NAYA: Ensures taps are handled safely
+          nestedScrollEnabled={true} // 🚀 NAYA: Helps WebView inside ScrollView handle touch correctly
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }} // Extra padding at bottom
         >
           <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
-            
-            {/* The aesthetic ruled lines sitting perfectly beneath the text */}
             <View style={styles.ruledLinesContainer} pointerEvents="none">
                {[...Array(150)].map((_, i) => (
                  <View key={i} style={styles.ruledLine} />
                ))}
             </View>
             
-            {/* 🚀 NAYA: True Rich Text Editor */}
             <RichEditor
               ref={richEditorRef}
               initialContentHTML={content}
@@ -465,7 +426,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
               placeholder="Start typing your aesthetic notes here..."
               style={styles.richEditor}
               editorStyle={{
-                backgroundColor: 'transparent', // Transparent to show ruled lines underneath!
+                backgroundColor: 'transparent',
                 color: '#2D2A2E',
                 placeholderColor: '#A09E9F',
                 cssText: `
@@ -488,7 +449,6 @@ export default function NoteScreen({ note, onSave, onBack }) {
             {placedItems.map((item) => (
               <DraggableSticker key={item.id} item={item} onRemove={removePlacedItem} />
             ))}
-            
           </ViewShot>
         </ScrollView>
       </View>
@@ -500,24 +460,15 @@ export default function NoteScreen({ note, onSave, onBack }) {
           <View style={styles.exportFooterLine} />
         </View>
         <View style={styles.exportBtnRow}>
-          <TouchableOpacity
-            style={[styles.exportBtn, styles.exportBtnAesthetic]}
-            onPress={generateAestheticPDF}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnAesthetic]} onPress={generateAestheticPDF} activeOpacity={0.8}>
             <Text style={styles.exportBtnIcon}>🎨</Text>
             <Text style={styles.exportBtnTitle}>Aesthetic PDF</Text>
-            <Text style={styles.exportBtnSub}>Visual · Stickers intact</Text>
+            <Text style={styles.exportBtnSub}>Visual · Stickers</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.exportBtn, styles.exportBtnPro]}
-            onPress={generateProfessionalPDF}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnPro]} onPress={generateProfessionalPDF} activeOpacity={0.8}>
             <Text style={styles.exportBtnIcon}>📄</Text>
             <Text style={styles.exportBtnTitle}>Professional PDF</Text>
-            <Text style={styles.exportBtnSub}>Text· Long notes</Text>
+            <Text style={styles.exportBtnSub}>Text · Clean</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -533,12 +484,7 @@ export default function NoteScreen({ note, onSave, onBack }) {
         </View>
       </Modal>
 
-      <AiSparkModal 
-        visible={showAiModal} 
-        onClose={() => setShowAiModal(false)} 
-        onSelectAction={handleAiAction}
-      />
-
+      <AiSparkModal visible={showAiModal} onClose={() => setShowAiModal(false)} onSelectAction={handleAiAction} />
     </KeyboardAvoidingView>
   );
 }
@@ -547,26 +493,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', padding: 20, paddingTop: 50 },
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   backButton: { fontSize: 16, color: '#8A8788', fontWeight: 'bold' },
+  
+  // 🚀 NAYA: Styles for Save & Delete Buttons
   saveBtn: { backgroundColor: '#2D2A2E', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  deleteBtn: { backgroundColor: '#FFE4E1', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 25, justifyContent: 'center' },
+  deleteBtnText: { fontSize: 16 },
   
   folderInput: { fontSize: 14, color: '#8A8788', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
   titleInput: { fontSize: 28, fontWeight: '800', color: '#2D2A2E', marginBottom: 15, lineHeight: 32 },
   
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
-  
   aiBtn: { backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
   aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-
   pomodoroBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   pomodoroBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  
   closePomodoroBtn: { position: 'absolute', top: 40, right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 15, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: '#EAE6E1' },
   closePomodoroText: { fontSize: 13, fontWeight: '800', color: '#2D2A2E', letterSpacing: 0.5 },
-
   highlightBtn: { backgroundColor: '#FDFD96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   highlightBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  
   toolLabel: { fontSize: 12, fontWeight: 'bold', color: '#A09E9F', marginHorizontal: 5 },
   stickerBtn: { paddingHorizontal: 5 },
   washiIcon: { width: 30, height: 12, transform: [{rotate: '-5deg'}], marginHorizontal: 5, borderRadius: 2, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
@@ -574,7 +519,6 @@ const styles = StyleSheet.create({
   drawBtn: { backgroundColor: '#E6E6FA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 5 },
   drawBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
 
-  // 🚀 NAYA: WYSIWYG Toolbar Styling
   richBar: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomWidth: 1, borderBottomColor: '#EAE6E1', paddingVertical: 2 },
   richBarFlat: { paddingHorizontal: 10, gap: 5 },
   richEditor: { flex: 1, minHeight: height * 0.6, zIndex: 1 },
@@ -600,4 +544,5 @@ const styles = StyleSheet.create({
   exportBtnIcon: { fontSize: 22, marginBottom: 2 },
   exportBtnTitle: { fontSize: 13, fontWeight: '700', color: '#2D2A2E', letterSpacing: 0.2 },
   exportBtnSub: { fontSize: 10, color: '#B8ADAF', letterSpacing: 0.3, textAlign: 'center' },
-});
+}); 
+    
