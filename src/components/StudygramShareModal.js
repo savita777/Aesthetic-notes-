@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import QRCode from 'react-native-qrcode-svg'; // 🚀 NAYA: QR Code library for viral marketing
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -33,7 +34,8 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 // Card is 9:16 ratio, fitting comfortably on screen with padding
 const CARD_W = Math.min(SCREEN_W - 48, 340);
-const CARD_H = Math.round(CARD_W * (16 / 9));
+// 🚀 NAYA: Thoda lamba kiya hai taaki QR code fit aa jaye
+const CARD_H = Math.round(CARD_W * (17.5 / 9)); 
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function StudygramShareModal({ visible, onClose }) {
@@ -235,6 +237,23 @@ export default function StudygramShareModal({ visible, onClose }) {
                 <View style={styles.quoteLine} />
               </View>
 
+              {/* 🚀 NAYA: The Viral Referral Block (Zero-Dollar Marketing) */}
+              <View style={styles.referralBlock}>
+                <View style={styles.qrContainer}>
+                  {/* Replace "https://luminanotes.com" with your actual app link */}
+                  <QRCode 
+                    value="https://luminanotes.com/download" 
+                    size={46} 
+                    color="#2D2A2E" 
+                    backgroundColor="transparent" 
+                  />
+                </View>
+                <View style={styles.referralTextContainer}>
+                  <Text style={styles.referralHeadline}>Create your aesthetic study space</Text>
+                  <Text style={styles.referralCTA}>Scan to download Lumina Notes ↗</Text>
+                </View>
+              </View>
+
               {/* Watermark */}
               <View style={styles.watermark}>
                 <View style={styles.watermarkDot} />
@@ -375,7 +394,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 22,
     paddingTop: 24,
-    paddingBottom: 18,
+    paddingBottom: 16,
     justifyContent: 'space-between',
   },
 
@@ -420,9 +439,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   streakCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: 'rgba(255,255,255,0.75)',
     borderWidth: 1.5,
     borderColor: 'rgba(255,213,0,0.3)',
@@ -596,6 +615,43 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
+  // 🚀 NAYA: Referral Block Styles
+  referralBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,179,186,0.3)',
+    gap: 12,
+  },
+  qrContainer: {
+    padding: 4,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EAE6E1',
+  },
+  referralTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  referralHeadline: {
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontStyle: 'italic',
+    fontSize: 11,
+    color: '#2D2A2E',
+    marginBottom: 2,
+  },
+  referralCTA: {
+    fontSize: 9,
+    color: '#B5838D',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
   // Watermark
   watermark: {
     flexDirection: 'row',
@@ -643,4 +699,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
-        
+            
