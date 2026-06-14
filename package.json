@@ -23,6 +23,7 @@
     "expo-local-authentication": "~14.0.1",
     "react-native-webview": "13.8.6",
     "react-native-pell-rich-editor": "1.9.0",
-    "react-native-qrcode-svg": "^6.3.0"
+    "react-native-qrcode-svg": "^6.3.0",
+    "expo-av": "~14.0.1"
   }
 }
