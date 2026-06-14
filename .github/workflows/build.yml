@@ -1,8 +1,6 @@
 name: Build Aesthetic APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -43,5 +41,4 @@ jobs:
           git add Ready-APK/LuminaNotes.apk
           git commit -m "🚀 Add latest APK build [skip ci]"
           git push
-          
           
