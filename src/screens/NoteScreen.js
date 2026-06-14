@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system'; // 🚀 NAYA: Image ko Base64 mein convert karne ke liye
+import { Feather } from '@expo/vector-icons';
 
 // True Rich Text Engine Imports
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
@@ -152,6 +153,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
     }
     try {
       const uri = await noteViewShotRef.current.capture({ format: 'png', quality: 1 });
+
       const htmlContent = `
         <html>
           <head>
@@ -332,13 +334,17 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
     >
       <View style={styles.headerBar}>
-        <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Feather name="chevron-left" size={20} color="#8A8788" />
+          <Text style={styles.backButton}>Back</Text>
+        </TouchableOpacity>
         
         {/* 🚀 NAYA: DELETE & SAVE BUTTON CONTAINER REFINED */}
         <View style={styles.headerActions}>
           {note && ( 
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
+              <Feather name="trash-2" size={14} color="#D9534F" />
+              <Text style={styles.deleteBtnText}>Delete</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
@@ -371,7 +377,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       <View style={styles.toolboxBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
           <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}>
-            <Text style={styles.aiBtnText}>✨ AI Spark</Text>
+            <Feather name="zap" size={14} color="#FFFFFF" />
+            <Text style={styles.aiBtnText}>AI Spark</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
 
@@ -380,11 +387,13 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
           <View style={styles.verticalDivider} />
 
           <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}>
-            <Text style={styles.pomodoroBtnText}>⏱️ Focus</Text>
+            <Feather name="clock" size={14} color="#2D2A2E" />
+            <Text style={styles.pomodoroBtnText}>Focus</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
           <TouchableOpacity onPress={applyHighlight} style={styles.highlightBtn}>
-            <Text style={styles.highlightBtnText}>🖍️ Mark</Text>
+            <Feather name="edit-3" size={14} color="#2D2A2E" />
+            <Text style={styles.highlightBtnText}>Mark</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
           <Text style={styles.toolLabel}>Stickers:</Text>
@@ -400,7 +409,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
           ))}
           <View style={styles.verticalDivider} />
           <TouchableOpacity onPress={() => setShowDraw(true)} style={styles.drawBtn}>
-            <Text style={styles.drawBtnText}>✏️ Draw</Text>
+            <Feather name="pen-tool" size={14} color="#2D2A2E" />
+            <Text style={styles.drawBtnText}>Draw</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -475,12 +485,12 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         </View>
         <View style={styles.exportBtnRow}>
           <TouchableOpacity style={[styles.exportBtn, styles.exportBtnAesthetic]} onPress={generateAestheticPDF} activeOpacity={0.8}>
-            <Text style={styles.exportBtnIcon}>🎨</Text>
+            <Feather name="image" size={22} color="#D9A8B0" style={styles.exportBtnIcon} />
             <Text style={styles.exportBtnTitle}>Aesthetic PDF</Text>
             <Text style={styles.exportBtnSub}>Visual · Stickers</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.exportBtn, styles.exportBtnPro]} onPress={generateProfessionalPDF} activeOpacity={0.8}>
-            <Text style={styles.exportBtnIcon}>📄</Text>
+            <Feather name="file-text" size={22} color="#9B92D9" style={styles.exportBtnIcon} />
             <Text style={styles.exportBtnTitle}>Professional PDF</Text>
             <Text style={styles.exportBtnSub}>Text · Clean</Text>
           </TouchableOpacity>
@@ -510,7 +520,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
         <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
           <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}>
-            <Text style={styles.closePomodoroText}>✕ Close Timer</Text>
+            <Feather name="x" size={14} color="#2D2A2E" />
+            <Text style={styles.closePomodoroText}>Close Timer</Text>
           </TouchableOpacity>
           <AestheticPomodoro />
         </View>
@@ -524,32 +535,33 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', padding: 20, paddingTop: 50 },
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backButton: { fontSize: 16, color: '#8A8788', fontWeight: 'bold' },
   
   // 🚀 NAYA: Styles for Action Buttons
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   saveBtn: { backgroundColor: '#2D2A2E', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  deleteBtn: { backgroundColor: '#FFF0F3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 25, borderWidth: 1, borderColor: '#FFB3BA' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF0F3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 25, borderWidth: 1, borderColor: '#FFB3BA' },
   deleteBtnText: { color: '#D9534F', fontWeight: '700', fontSize: 13 },
   
   folderInput: { fontSize: 14, color: '#8A8788', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
   titleInput: { fontSize: 28, fontWeight: '800', color: '#2D2A2E', marginBottom: 15, lineHeight: 32 },
   
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
-  aiBtn: { backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
+  aiBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
   aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-  pomodoroBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
+  pomodoroBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   pomodoroBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  closePomodoroBtn: { position: 'absolute', top: 40, right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 15, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: '#EAE6E1' },
+  closePomodoroBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, position: 'absolute', top: 40, right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 15, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: '#EAE6E1' },
   closePomodoroText: { fontSize: 13, fontWeight: '800', color: '#2D2A2E', letterSpacing: 0.5 },
-  highlightBtn: { backgroundColor: '#FDFD96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
+  highlightBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FDFD96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   highlightBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
   toolLabel: { fontSize: 12, fontWeight: 'bold', color: '#A09E9F', marginHorizontal: 5 },
   stickerBtn: { paddingHorizontal: 5 },
   washiIcon: { width: 30, height: 12, transform: [{rotate: '-5deg'}], marginHorizontal: 5, borderRadius: 2, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
   verticalDivider: { width: 1, height: 25, backgroundColor: '#EAE6E1', marginHorizontal: 10 },
-  drawBtn: { backgroundColor: '#E6E6FA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 5 },
+  drawBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E6E6FA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 5 },
   drawBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
 
   richBar: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomWidth: 1, borderBottomColor: '#EAE6E1', paddingVertical: 2 },
@@ -574,7 +586,7 @@ const styles = StyleSheet.create({
   exportBtn: { flex: 1, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', borderWidth: 1, gap: 3, shadowColor: '#C8B8B0', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 2 },
   exportBtnAesthetic: { backgroundColor: '#FFF0F3', borderColor: 'rgba(255,179,186,0.5)' },
   exportBtnPro: { backgroundColor: '#F4F2FF', borderColor: 'rgba(174,166,230,0.5)' },
-  exportBtnIcon: { fontSize: 22, marginBottom: 2 },
+  exportBtnIcon: { marginBottom: 2 },
   exportBtnTitle: { fontSize: 13, fontWeight: '700', color: '#2D2A2E', letterSpacing: 0.2 },
   exportBtnSub: { fontSize: 10, color: '#B8ADAF', letterSpacing: 0.3, textAlign: 'center' },
 });
