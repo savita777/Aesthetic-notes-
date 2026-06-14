@@ -1,244 +1,603 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, ScrollView, Image, Dimensions, Modal, AppState, KeyboardAvoidingView, Platform } from 'react-native'; 
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import ViewShot from 'react-native-view-shot';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system'; 
+// DeepReadScreen.js
+// "Deep Reading" Mode — Split-screen PDF viewer + Rich Notes
+// Stealth Mode / Dark Launch — ready to wire into navigation
+//
+// Props (when hooked into navigator):
+//   route.params.pdfUri  — URI of the PDF to display (optional)
+//   route.params.note    — existing note object to pre-load (optional)
+//   navigation           — standard RN navigation object
 
-// True Rich Text Engine Imports
-import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  PanResponder,
+  Animated,
+  Dimensions,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  StatusBar,
+} from 'react-native';
 
-import { Colors } from '../theme/colors';
-import DrawModal from '../components/DrawModal';
-import DraggableSticker from '../components/DraggableSticker';
-import AestheticPomodoro from '../components/AestheticPomodoro';
-import AiSparkModal from '../components/AiSparkModal';
+// ── When you're ready to enable real PDF rendering, swap this comment:
+// import Pdf from 'react-native-pdf';           // npx expo install react-native-pdf
+// import Source from 'react-native-pdf';
 
-// 🚀 NAYA: Audio Modules Import (Notability style)
-import { MicButton, AudioPlaybackPill } from '../components/AudioRecorder';
+const { width: W, height: H } = Dimensions.get('window');
 
-import { supabase } from '../../supabase';
+// ─── Layout ──────────────────────────────────────────────────────────────────
+const SAFE_TOP       = Platform.OS === 'ios' ? 52 : 36;
+const NAV_BAR_H      = 52;
+const DIVIDER_H      = 36;
+const USABLE_H       = H - SAFE_TOP - NAV_BAR_H - DIVIDER_H;
+const MIN_PANEL_FRAC = 0.18;   // smallest either panel can get (fraction of USABLE_H)
+const DEFAULT_SPLIT  = 0.50;   // 50 / 50 on first open
 
-const { width, height } = Dimensions.get('window');
+// ─── Tokens ──────────────────────────────────────────────────────────────────
+const L = {
+  bg:          '#F8F6F2',
+  surface:     '#FFFFFF',
+  card:        '#F2EFE9',
+  border:      '#E8E3DB',
+  accent:      '#B5838D',
+  accentSoft:  '#F2E8EA',
+  text:        '#2D2A2E',
+  muted:       '#9B9099',
+  dividerBg:   'rgba(248,246,242,0.95)',
+  shadow:      '#2D2A2E',
+};
 
-export default function NoteScreen({ note, onSave, onDelete, onBack }) {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [noteColor, setNoteColor] = useState('#FDF6F5'); 
-  const [folder, setFolder] = useState(''); 
-  const [doodle, setDoodle] = useState(null);
-  const [placedItems, setPlacedItems] = useState([]);
-  const [audioUri, setAudioUri] = useState(null); // 🚀 NAYA: Audio State
-  
-  const [showDraw, setShowDraw] = useState(false);
-  const [showPomodoro, setShowPomodoro] = useState(false);
-  const [showAiModal, setShowAiModal] = useState(false);
-  const [isAiThinking, setIsAiThinking] = useState(false);
-
-  const noteViewShotRef = useRef();
-  const autoSaveTimer = useRef(null);
-  const richEditorRef = useRef(null);
-
-  const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
-  const washiColors = ['#FFD1DC', '#FDFD96', '#C1E1C1', '#AEC6CF', '#E6E6FA']; 
-
-  useEffect(() => {
-    if (note) {
-      setTitle(note.title); 
-      setContent(note.content);
-      setNoteColor(note.color || '#FDF6F5'); 
-      setFolder(note.folder || '');
-      setDoodle(note.doodle || null);
-      setPlacedItems(note.placedItems || []);
-      setAudioUri(note.audioUri || null); // Load saved audio
-      setTimeout(() => richEditorRef.current?.setContentHTML(note.content), 100);
-    } else {
-      const loadDraft = async () => {
-        try {
-          const savedDraft = await AsyncStorage.getItem('@lumina_draft');
-          if (savedDraft) {
-            const parsedDraft = JSON.parse(savedDraft);
-            setTitle(parsedDraft.title || '');
-            setContent(parsedDraft.content || '');
-            if (parsedDraft.folder) setFolder(parsedDraft.folder);
-            if (parsedDraft.noteColor) setNoteColor(parsedDraft.noteColor);
-            if (parsedDraft.doodle) setDoodle(parsedDraft.doodle);
-            if (parsedDraft.placedItems) setPlacedItems(parsedDraft.placedItems);
-            if (parsedDraft.audioUri) setAudioUri(parsedDraft.audioUri);
-            setTimeout(() => richEditorRef.current?.setContentHTML(parsedDraft.content || ''), 100);
-          }
-        } catch (error) { console.log("Draft load error", error); }
-      };
-      loadDraft();
-    }
-  }, [note]);
-
-  const saveDraftLocally = async () => {
-    try {
-      const draftData = { title, content, folder, noteColor, doodle, placedItems, audioUri, timestamp: Date.now() };
-      await AsyncStorage.setItem('@lumina_draft', JSON.stringify(draftData));
-    } catch (error) {}
-  };
-
-  useEffect(() => {
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      if (title || content) saveDraftLocally();
-    }, 5000);
-    return () => clearTimeout(autoSaveTimer.current);
-  }, [title, content, folder, noteColor, doodle, placedItems, audioUri]);
-
-  const handleDelete = () => {
-    Alert.alert("Delete Note", "Are you sure you want to permanently delete this note?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-          await AsyncStorage.removeItem('@lumina_draft');
-          if (onDelete && note?.id) onDelete(note.id); else onBack();
-      }}
-    ]);
-  };
-
-  const addPlacedItem = (type, contentOrColor) => {
-    const newItem = { id: Date.now().toString(), type: type, content: type === 'emoji' ? contentOrColor : null, color: type === 'washi' ? contentOrColor : null };
-    setPlacedItems([...placedItems, newItem]);
-  };
-
-  const removePlacedItem = (id) => setPlacedItems(placedItems.filter(item => item.id !== id));
-  const applyHighlight = () => richEditorRef.current?.sendAction('hiliteColor', 'result', '#FDFD96');
-
-  // ... (Keeping your exact PDF generation logic untouched)
-  const generateProfessionalPDF = async () => {
-    if (!title.trim()) { Alert.alert('Oops!', 'Please enter a Topic Title! 📚'); return; }
-    try {
-      const bodyHtml = content; 
-      const htmlContent = `<html><head><style>body { font-family: 'Georgia', serif; font-size: 15px; padding: 48px; }</style></head><body><h1>${title}</h1><div>${bodyHtml}</div></body></html>`;
-      const { uri: pdfUri } = await Print.printToFileAsync({ html: htmlContent });
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(pdfUri);
-    } catch (error) { Alert.alert('Export Failed', error.message); }
-  };
-
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF Panel
+// Placeholder that looks like a document page. Swap the inner content
+// for <Pdf source={{ uri: pdfUri }} style={StyleSheet.absoluteFill} />
+// once react-native-pdf is installed.
+// ─────────────────────────────────────────────────────────────────────────────
+function PdfPanel({ pdfUri, height }) {
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={onBack}><Text style={styles.backButton}>← Back</Text></TouchableOpacity>
-        <View style={styles.headerActions}>
-          {note && ( 
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.saveBtn} onPress={async () => {
-              await AsyncStorage.removeItem('@lumina_draft'); 
-              onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems, audioUri); // AudioUri passed!
-            }}>
-            <Text style={styles.saveBtnText}>Save</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={[pdfStyles.container, { height }]}>
+      {/* Toolbar strip */}
+      <View style={pdfStyles.toolbar}>
+        <TouchableOpacity style={pdfStyles.toolBtn}>
+          <Text style={pdfStyles.toolIcon}>◀</Text>
+        </TouchableOpacity>
+        <Text style={pdfStyles.pageLabel}>Page 1 of 24</Text>
+        <TouchableOpacity style={pdfStyles.toolBtn}>
+          <Text style={pdfStyles.toolIcon}>▶</Text>
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity style={pdfStyles.toolBtn}>
+          <Text style={pdfStyles.toolIcon}>⊕</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={pdfStyles.toolBtn}>
+          <Text style={pdfStyles.toolIcon}>⊖</Text>
+        </TouchableOpacity>
       </View>
 
-      <TextInput style={styles.folderInput} placeholder="Subject (e.g., Physics, UPSC) 🏷️" value={folder} onChangeText={setFolder} />
-      <TextInput style={styles.titleInput} placeholder="Topic Title..." value={title} onChangeText={setTitle} multiline />
-      
-      <View style={styles.toolboxBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
-          <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}><Text style={styles.aiBtnText}>✨ AI Spark</Text></TouchableOpacity>
-          <View style={styles.verticalDivider} />
-          
-          {/* 🚀 NAYA: Mic Button UI Injection */}
-          <MicButton onRecordingComplete={(uri) => setAudioUri(uri)} />
-          <View style={styles.verticalDivider} />
-          
-          <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}><Text style={styles.pomodoroBtnText}>⏱️ Focus</Text></TouchableOpacity>
-          <View style={styles.verticalDivider} />
-          <TouchableOpacity onPress={applyHighlight} style={styles.highlightBtn}><Text style={styles.highlightBtnText}>🖍️ Mark</Text></TouchableOpacity>
-          <View style={styles.verticalDivider} />
-          <Text style={styles.toolLabel}>Stickers:</Text>
-          {stickersList.map((emoji, index) => (
-             <TouchableOpacity key={'stk'+index} onPress={() => addPlacedItem('emoji', emoji)} style={styles.stickerBtn}><Text style={{fontSize:20}}>{emoji}</Text></TouchableOpacity>
-          ))}
-          <View style={styles.verticalDivider} />
-          <TouchableOpacity onPress={() => setShowDraw(true)} style={styles.drawBtn}><Text style={styles.drawBtnText}>✏️ Draw</Text></TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      <RichToolbar editor={richEditorRef} actions={[actions.setBold, actions.setItalic, actions.setUnderline, actions.heading1, actions.insertBulletsList, actions.blockquote, actions.undo, actions.redo]} iconTint="#A09E9F" selectedIconTint="#B5838D" style={styles.richBar} flatContainerStyle={styles.richBarFlat} />
-
-      <View style={styles.masterCanvasWrapper}>
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true} contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }}>
-          <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
-            
-            {/* 🚀 NAYA: Audio Pill Injection Right above Text */}
-            <AudioPlaybackPill uri={audioUri} onDelete={() => setAudioUri(null)} />
-            
-            <RichEditor
-              ref={richEditorRef}
-              initialContentHTML={content}
-              onChange={setContent}
-              placeholder="Start typing your aesthetic notes here..."
-              style={styles.richEditor}
-              editorStyle={{ backgroundColor: 'transparent', color: '#2D2A2E', placeholderColor: '#A09E9F', cssText: `body { font-family: -apple-system, 'Georgia', serif; font-size: 17px; line-height: 35px; margin: 0; padding: 0; }` }}
-              useContainer={true}
-            />
-
-            {placedItems.map((item) => (
-              <DraggableSticker key={item.id} item={item} onRemove={removePlacedItem} />
+      {/* Document area */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={pdfStyles.docArea}
+        showsVerticalScrollIndicator={false}
+      >
+        {pdfUri ? (
+          // ── Real PDF ──────────────────────────────────────────────────────
+          // Uncomment when react-native-pdf is installed:
+          // <Pdf
+          //   source={{ uri: pdfUri, cache: true }}
+          //   style={{ flex: 1, width: W }}
+          //   onLoadComplete={(pages) => console.log(`PDF loaded: ${pages} pages`)}
+          //   onError={(err) => console.warn('PDF error:', err)}
+          // />
+          <View style={pdfStyles.mockPage}>
+            <Text style={pdfStyles.mockTitle}>Document Loaded</Text>
+            <Text style={pdfStyles.mockBody}>{pdfUri}</Text>
+          </View>
+        ) : (
+          // ── Placeholder ───────────────────────────────────────────────────
+          <View style={pdfStyles.mockPage}>
+            {/* Simulated document header */}
+            <View style={pdfStyles.mockDocHeader}>
+              <View style={[pdfStyles.mockBlock, { width: '60%', height: 14, marginBottom: 6 }]} />
+              <View style={[pdfStyles.mockBlock, { width: '40%', height: 10, opacity: 0.4 }]} />
+            </View>
+            {/* Simulated body lines */}
+            {[...Array(14)].map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  pdfStyles.mockLine,
+                  { width: i % 5 === 4 ? '72%' : '100%', opacity: 0.9 - i * 0.03 },
+                ]}
+              />
             ))}
-          </ViewShot>
-        </ScrollView>
-      </View>
-
-      <DrawModal visible={showDraw} onClose={() => setShowDraw(false)} onSave={async (uri) => { 
-          setShowDraw(false);
-          try {
-            const base64Str = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-            const b64Data = `data:image/png;base64,${base64Str}`;
-            richEditorRef.current?.insertHTML(`<br><br><img src="${b64Data}" style="width: 100%; border-radius: 12px; border: 1px solid #EAE6E1;" /><br><br>`);
-          } catch(e) {}
-        }} />
-
-      <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
-          <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}><Text style={styles.closePomodoroText}>✕ Close Timer</Text></TouchableOpacity>
-          <AestheticPomodoro />
-        </View>
-      </Modal>
-
-      <AiSparkModal visible={showAiModal} onClose={() => setShowAiModal(false)} />
-    </KeyboardAvoidingView>
+            <View style={pdfStyles.mockSectionBreak} />
+            {[...Array(10)].map((_, i) => (
+              <View
+                key={`b${i}`}
+                style={[
+                  pdfStyles.mockLine,
+                  { width: i % 4 === 3 ? '80%' : '100%' },
+                ]}
+              />
+            ))}
+            <Text style={pdfStyles.placeholderHint}>
+              PDF viewer area — connect a URI via{'\n'}route.params.pdfUri
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF8F5', padding: 20, paddingTop: 50 },
-  headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  backButton: { fontSize: 16, color: '#8A8788', fontWeight: 'bold' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  saveBtn: { backgroundColor: '#2D2A2E', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
-  saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  deleteBtn: { backgroundColor: '#FFF0F3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 25, borderWidth: 1, borderColor: '#FFB3BA' },
-  deleteBtnText: { color: '#D9534F', fontWeight: '700', fontSize: 13 },
-  folderInput: { fontSize: 14, color: '#8A8788', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
-  titleInput: { fontSize: 28, fontWeight: '800', color: '#2D2A2E', marginBottom: 15, lineHeight: 32 },
-  toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
-  aiBtn: { backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
-  aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-  pomodoroBtn: { backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
-  pomodoroBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  closePomodoroBtn: { position: 'absolute', top: 40, right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 15, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: '#EAE6E1' },
-  closePomodoroText: { fontSize: 13, fontWeight: '800', color: '#2D2A2E', letterSpacing: 0.5 },
-  highlightBtn: { backgroundColor: '#FDFD96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
-  highlightBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  toolLabel: { fontSize: 12, fontWeight: 'bold', color: '#A09E9F', marginHorizontal: 5 },
-  stickerBtn: { paddingHorizontal: 5 },
-  washiIcon: { width: 30, height: 12, transform: [{rotate: '-5deg'}], marginHorizontal: 5, borderRadius: 2, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
-  verticalDivider: { width: 1, height: 25, backgroundColor: '#EAE6E1', marginHorizontal: 10 },
-  drawBtn: { backgroundColor: '#E6E6FA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 5 },
-  drawBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  richBar: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 12, borderTopRightRadius: 12, borderBottomWidth: 1, borderBottomColor: '#EAE6E1', paddingVertical: 2 },
-  richBarFlat: { paddingHorizontal: 10, gap: 5 },
-  richEditor: { flex: 1, minHeight: height * 0.6, zIndex: 1 },
-  masterCanvasWrapper: { flex: 1, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, marginBottom: 15, borderWidth: 1, borderTopWidth: 0, borderColor: '#EAE6E1', overflow: 'hidden', backgroundColor: '#FFF' }, 
-  noteContainer: { minHeight: height * 0.6, paddingHorizontal: 15, paddingTop: 10, paddingBottom: 50, overflow: 'hidden' }, 
+const pdfStyles = StyleSheet.create({
+  container: {
+    backgroundColor: L.card,
+    overflow: 'hidden',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: L.border,
+    backgroundColor: L.surface,
+    gap: 4,
+  },
+  toolBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: L.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolIcon: { fontSize: 13, color: L.muted },
+  pageLabel: { fontSize: 12, color: L.muted, fontWeight: '600', marginHorizontal: 8 },
+  docArea: { padding: 20 },
+  mockPage: {
+    backgroundColor: L.surface,
+    borderRadius: 8,
+    padding: 24,
+    minHeight: 400,
+    shadowColor: L.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  mockDocHeader: { marginBottom: 20 },
+  mockTitle: { fontSize: 15, fontWeight: '700', color: L.text, marginBottom: 6 },
+  mockBody:  { fontSize: 12, color: L.muted },
+  mockBlock: { backgroundColor: L.text, borderRadius: 3 },
+  mockLine: {
+    height: 9,
+    backgroundColor: L.border,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  mockSectionBreak: {
+    height: 1,
+    backgroundColor: L.border,
+    marginVertical: 16,
+  },
+  placeholderHint: {
+    marginTop: 24,
+    fontSize: 11,
+    color: L.muted,
+    textAlign: 'center',
+    lineHeight: 17,
+    fontStyle: 'italic',
+  },
 });
-                                                  
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notes Panel
+// Simplified placeholder that mirrors the NoteScreen layout without the full
+// RichEditor dependency. Wire in <RichEditor ref={...} /> where indicated.
+// ─────────────────────────────────────────────────────────────────────────────
+function NotesPanel({ height, note }) {
+  return (
+    <View style={[notesStyles.container, { height }]}>
+      {/* Panel label */}
+      <View style={notesStyles.panelHeader}>
+        <Text style={notesStyles.panelLabel}>📝 Notes</Text>
+        <Text style={notesStyles.linkedLabel}>Linked to this reading</Text>
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={notesStyles.scrollContent}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Title */}
+        <Text style={notesStyles.noteTitle} numberOfLines={1}>
+          {note?.title || 'Deep Reading Notes'}
+        </Text>
+
+        {/* ── RichEditor slot ───────────────────────────────────────────────
+            When wiring into production, replace this placeholder with:
+
+            import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
+
+            <RichEditor
+              ref={richEditorRef}
+              initialContentHTML={content}
+              onChange={handleEditorChange}
+              editorStyle={{
+                backgroundColor: '#F8F6F2',
+                color: '#2D2A2E',
+                cssText: RICH_EDITOR_CSS,  // import from NoteScreen.js
+              }}
+              placeholder="Type your reading notes here..."
+              style={{ flex: 1, minHeight: 200 }}
+              scrollEnabled={false}
+              useContainer={false}
+            />
+        ─────────────────────────────────────────────────────────────────── */}
+        <View style={notesStyles.editorPlaceholder}>
+          <View style={notesStyles.cursorLine}>
+            <View style={notesStyles.cursor} />
+          </View>
+          {[...Array(5)].map((_, i) => (
+            <View key={i} style={[notesStyles.draftLine, { width: i === 4 ? '55%' : '100%' }]} />
+          ))}
+          <Text style={notesStyles.editorHint}>
+            Rich Text Editor mounts here{'\n'}(react-native-pell-rich-editor)
+          </Text>
+        </View>
+      </ScrollView>
+
+      {/* Minimal toolbar strip */}
+      <View style={notesStyles.miniToolbar}>
+        {['B', 'I', 'H1', 'H2', '"', '•'].map((action) => (
+          <TouchableOpacity key={action} style={notesStyles.toolChip}>
+            <Text style={notesStyles.toolChipText}>{action}</Text>
+          </TouchableOpacity>
+        ))}
+        <View style={{ flex: 1 }} />
+        <TouchableOpacity style={notesStyles.aiChip}>
+          <Text style={notesStyles.aiChipText}>✦ AI</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const notesStyles = StyleSheet.create({
+  container: {
+    backgroundColor: L.bg,
+    overflow: 'hidden',
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: L.border,
+  },
+  panelLabel:   { fontSize: 13, fontWeight: '700', color: L.text },
+  linkedLabel:  { fontSize: 11, color: L.muted },
+  scrollContent: { padding: 16, paddingBottom: 24 },
+  noteTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: L.text,
+    letterSpacing: -0.3,
+    marginBottom: 12,
+  },
+  editorPlaceholder: {
+    minHeight: 180,
+    padding: 4,
+  },
+  cursorLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cursor: {
+    width: 2,
+    height: 18,
+    backgroundColor: L.accent,
+    borderRadius: 1,
+  },
+  draftLine: {
+    height: 8,
+    backgroundColor: L.border,
+    borderRadius: 4,
+    marginBottom: 10,
+    opacity: 0.7,
+  },
+  editorHint: {
+    marginTop: 16,
+    fontSize: 11,
+    color: L.muted,
+    textAlign: 'center',
+    lineHeight: 17,
+    fontStyle: 'italic',
+  },
+  miniToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    borderTopWidth: 1,
+    borderTopColor: L.border,
+    backgroundColor: L.surface,
+    gap: 6,
+  },
+  toolChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: L.card,
+    borderRadius: 8,
+  },
+  toolChipText: { fontSize: 12, fontWeight: '700', color: L.text },
+  aiChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: L.accentSoft,
+    borderRadius: 10,
+  },
+  aiChipText: { fontSize: 12, fontWeight: '700', color: L.accent },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Draggable Divider
+// The signature element: a frosted-glass band with a pill handle.
+// The "DRAG" label fades out after the first successful drag — like a premium
+// appliance instruction that trusts the user after one use.
+// ─────────────────────────────────────────────────────────────────────────────
+function DraggableDivider({ onMove, hasBeenDragged }) {
+  const labelOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (hasBeenDragged) {
+      Animated.timing(labelOpacity, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [hasBeenDragged]);
+
+  return (
+    <View style={dividerStyles.band}>
+      {/* Left hairline */}
+      <View style={dividerStyles.hairline} />
+
+      {/* Pill handle — the tactile anchor point */}
+      <View style={dividerStyles.pill}>
+        <View style={dividerStyles.pillGroove} />
+        <View style={dividerStyles.pillGroove} />
+        <View style={dividerStyles.pillGroove} />
+      </View>
+
+      {/* "DRAG" label — fades after first use */}
+      <Animated.Text style={[dividerStyles.dragLabel, { opacity: labelOpacity }]}>
+        DRAG
+      </Animated.Text>
+
+      {/* Right hairline */}
+      <View style={dividerStyles.hairline} />
+    </View>
+  );
+}
+
+const dividerStyles = StyleSheet.create({
+  band: {
+    height: DIVIDER_H,
+    backgroundColor: L.dividerBg,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: L.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    // Subtle shadow on both edges
+    shadowColor: L.shadow,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
+  },
+  hairline: {
+    flex: 1,
+    height: 1,
+    backgroundColor: L.border,
+    opacity: 0.6,
+  },
+  pill: {
+    width: 48,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: L.surface,
+    borderWidth: 1,
+    borderColor: L.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    shadowColor: L.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  pillGroove: {
+    width: 3,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: L.border,
+  },
+  dragLabel: {
+    fontSize: 6,
+    letterSpacing: 3,
+    color: L.muted,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    position: 'absolute',
+    bottom: 3,
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DeepReadScreen — the main export
+// ─────────────────────────────────────────────────────────────────────────────
+export default function DeepReadScreen({ route, navigation }) {
+  const pdfUri = route?.params?.pdfUri || null;
+  const note   = route?.params?.note   || null;
+
+  // splitFraction: 0 = all PDF, 1 = all notes. Clamped to MIN_PANEL_FRAC.
+  const [splitFraction, setSplitFraction] = useState(DEFAULT_SPLIT);
+  const [hasBeenDragged, setHasBeenDragged] = useState(false);
+
+  // Track the live drag position with a ref so PanResponder doesn't stale-close
+  const splitRef = useRef(DEFAULT_SPLIT);
+
+  // Animated value drives visual position during gesture (no setState lag)
+  const dragY = useRef(new Animated.Value(DEFAULT_SPLIT * USABLE_H)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder:        () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+
+      onPanResponderGrant: () => {
+        // Anchor the animated value at the current committed position
+        dragY.setOffset(splitRef.current * USABLE_H);
+        dragY.setValue(0);
+        setHasBeenDragged(true);
+      },
+
+      onPanResponderMove: (_, gestureState) => {
+        // Move the divider visually — no setState, no re-render during drag
+        dragY.setValue(gestureState.dy);
+      },
+
+      onPanResponderRelease: (_, gestureState) => {
+        dragY.flattenOffset();
+
+        // Compute new fraction and clamp to valid range
+        const rawPx  = splitRef.current * USABLE_H + gestureState.dy;
+        const clamped = Math.min(
+          Math.max(rawPx, MIN_PANEL_FRAC * USABLE_H),
+          (1 - MIN_PANEL_FRAC) * USABLE_H,
+        );
+        const newFrac = clamped / USABLE_H;
+
+        // Snap the animated value to the committed position
+        Animated.spring(dragY, {
+          toValue: clamped,
+          friction: 7,
+          tension: 60,
+          useNativeDriver: false,
+        }).start();
+
+        splitRef.current = newFrac;
+        setSplitFraction(newFrac);
+      },
+    })
+  ).current;
+
+  // Derive pixel heights for each panel
+  const pdfHeight   = splitFraction * USABLE_H;
+  const notesHeight = (1 - splitFraction) * USABLE_H;
+
+  return (
+    <View style={screen.root}>
+      <StatusBar barStyle="dark-content" backgroundColor={L.bg} />
+
+      {/* ── Navigation bar ── */}
+      <View style={screen.navBar}>
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={screen.navBtn}>
+          <Text style={screen.navBtnText}>←</Text>
+        </TouchableOpacity>
+        <Text style={screen.navTitle}>Deep Reading</Text>
+        <View style={screen.navRight}>
+          <View style={screen.modeBadge}>
+            <Text style={screen.modeBadgeText}>FOCUS</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── PDF Panel ── */}
+      <PdfPanel pdfUri={pdfUri} height={pdfHeight} />
+
+      {/* ── Draggable Divider ── */}
+      <View {...panResponder.panHandlers}>
+        <DraggableDivider onMove={setSplitFraction} hasBeenDragged={hasBeenDragged} />
+      </View>
+
+      {/* ── Notes Panel ── */}
+      <NotesPanel height={notesHeight} note={note} />
+    </View>
+  );
+}
+
+const screen = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: L.bg,
+    paddingTop: SAFE_TOP,
+  },
+  navBar: {
+    height: NAV_BAR_H,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: L.border,
+    backgroundColor: L.surface,
+  },
+  navBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: L.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBtnText: { fontSize: 16, color: L.text },
+  navTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+    color: L.text,
+    letterSpacing: 0.2,
+  },
+  navRight: {
+    width: 36,
+    alignItems: 'flex-end',
+  },
+  modeBadge: {
+    backgroundColor: L.accentSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  modeBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: L.accent,
+    letterSpacing: 1.5,
+  },
+});
+  
