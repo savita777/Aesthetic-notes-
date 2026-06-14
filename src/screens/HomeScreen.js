@@ -13,6 +13,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+
 import { Colors } from '../theme/colors';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
@@ -20,7 +22,6 @@ import StudygramShareModal from '../components/StudygramShareModal';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 14) / 2;
 
-// 🚀 NAYA: Premium Frosted Glass Colors (Apple iOS Style)
 const SUBJECT_GLASS = {
   '📓 Physics':  { tint: '#E3EDF4', emoji: '📓' },
   '📐 Maths':    { tint: '#E5EFE4', emoji: '📐' },
@@ -34,43 +35,24 @@ function getGlassPalette(subject) {
   return SUBJECT_GLASS[subject] || DEFAULT_GLASS;
 }
 
-// 🚀 NAYA: Frosted Glass Collection Card
 function CollectionCard({ subject, count, isActive, onPress }) {
   const palette = getGlassPalette(subject);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const handlePressIn = () =>
-    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 40 }).start();
-  const handlePressOut = () =>
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+  const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 40 }).start();
+  const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
   const labelText = subject.replace(/^\S+\s/, '');
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={onPress}
-        style={[
-          styles.glassCard,
-          { backgroundColor: palette.tint }, // Soft pastel tint
-          isActive && styles.glassCardActive,
-        ]}
-      >
+      <TouchableOpacity activeOpacity={0.8} onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress} style={[styles.glassCard, { backgroundColor: palette.tint }, isActive && styles.glassCardActive]}>
         <View style={styles.glassInner}>
           <Text style={styles.glassEmoji}>{palette.emoji}</Text>
-
           <View style={styles.glassMeta}>
-            <Text style={styles.glassSubjectName} numberOfLines={1}>
-              {labelText}
-            </Text>
-            <Text style={styles.glassNoteCount}>
-              {count} {count === 1 ? 'note' : 'notes'}
-            </Text>
+            <Text style={styles.glassSubjectName} numberOfLines={1}>{labelText}</Text>
+            <Text style={styles.glassNoteCount}>{count} {count === 1 ? 'note' : 'notes'}</Text>
           </View>
-
           {isActive && <View style={styles.activeDot} />}
         </View>
       </TouchableOpacity>
@@ -78,32 +60,18 @@ function CollectionCard({ subject, count, isActive, onPress }) {
   );
 }
 
-// 📓 UNCHANGED: The Notebook Note Card
 function NoteCard({ item, onPress }) {
   return (
-    <TouchableOpacity
-      style={[styles.notebookCard, { backgroundColor: item.color || '#FDF6F5' }]}
-      onPress={() => onPress(item)}
-      activeOpacity={0.8}
-    >
+    <TouchableOpacity style={[styles.notebookCard, { backgroundColor: item.color || '#FDF6F5' }]} onPress={() => onPress(item)} activeOpacity={0.8}>
       <View style={styles.binderStrip}>
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
-        <View style={styles.binderHole} />
+        <View style={styles.binderHole} /><View style={styles.binderHole} /><View style={styles.binderHole} /><View style={styles.binderHole} /><View style={styles.binderHole} />
       </View>
-
       <View style={styles.notebookContent}>
         <View style={styles.notebookLabel}>
           <Text style={styles.labelSubject}>{item.folder || '📝 Journal'}</Text>
         </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {item.title || 'Untitled Session'}
-        </Text>
-        <Text style={styles.cardSnippet} numberOfLines={3}>
-          {item.content || 'Tap to study...'}
-        </Text>
+        <Text style={styles.cardTitle} numberOfLines={2}>{item.title || 'Untitled Session'}</Text>
+        <Text style={styles.cardSnippet} numberOfLines={3}>{item.content || 'Tap to study...'}</Text>
         <View style={styles.footer}>
           <Text style={styles.cardDate}>{item.date?.split(' ')[0]}</Text>
         </View>
@@ -112,23 +80,14 @@ function NoteCard({ item, onPress }) {
   );
 }
 
-// 🚀 NAYA: Premium "Focus Read" Deep Read Banner
 function FocusReadBanner({ onPress }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const handlePressIn = () =>
-    Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 40 }).start();
-  const handlePressOut = () =>
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+  const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 40 }).start();
+  const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
   return (
     <Animated.View style={[styles.focusBanner, { transform: [{ scale: scaleAnim }] }]}>
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={onPress}
-        style={styles.focusBannerInner}
-      >
+      <TouchableOpacity activeOpacity={0.9} onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress} style={styles.focusBannerInner}>
         <View style={styles.focusBannerLeft}>
           <View style={styles.focusBannerIconWrap}>
             <Feather name="book-open" size={20} color="#5C4B8A" />
@@ -146,7 +105,6 @@ function FocusReadBanner({ onPress }) {
   );
 }
 
-// 🚀 NAYA: onOpenDeepRead added to props
 export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout, onOpenDeepRead }) {
   const [activeSubject, setActiveSubject] = useState('All Notes');
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,11 +116,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
     const matchesSubject = activeSubject === 'All Notes' ? true : n.folder === activeSubject;
     const query = searchQuery.toLowerCase().trim();
     if (!query) return matchesSubject;
-    const matchesSearch =
-      (n.title || '').toLowerCase().includes(query) ||
-      (n.content || '').toLowerCase().includes(query) ||
-      (n.folder || '').toLowerCase().includes(query);
-    return matchesSubject && matchesSearch;
+    return matchesSubject && ((n.title || '').toLowerCase().includes(query) || (n.content || '').toLowerCase().includes(query) || (n.folder || '').toLowerCase().includes(query));
   });
 
   function countForSubject(subject) {
@@ -174,6 +128,20 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
     }).length;
   }
 
+  const handleOpenFocusRead = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        onOpenDeepRead(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.log("Error selecting PDF:", err);
+    }
+  };
+
   const recentHeader = () => {
     const label = activeSubject === 'All Notes' ? 'All Notes' : activeSubject.replace(/^\S+\s/, '');
     const count = filteredNotes.length;
@@ -181,11 +149,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>Recent Notes</Text>
-          <Text style={styles.sectionSubtitle}>
-            {searchQuery
-              ? `${count} result${count !== 1 ? 's' : ''} for "${searchQuery}"`
-              : `${count} ${count === 1 ? 'note' : 'notes'} in ${label}`}
-          </Text>
+          <Text style={styles.sectionSubtitle}>{searchQuery ? `${count} results for "${searchQuery}"` : `${count} ${count === 1 ? 'note' : 'notes'} in ${label}`}</Text>
         </View>
       </View>
     );
@@ -195,7 +159,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
     <View style={styles.staticHeader}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greetingText}>Ready to Focus? ✨</Text>
+          <Text style={styles.greetingText}>Your Private Library</Text>
           <Text style={styles.headerTitle}>My Study Space</Text>
         </View>
         <View style={styles.headerActions}>
@@ -207,23 +171,11 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
           </TouchableOpacity>
         </View>
       </View>
-
       <View style={styles.searchContainer}>
         <Feather name="search" size={18} color="#A09E9F" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search notes, topics..."
-          placeholderTextColor="#A09E9F"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          returnKeyType="search"
-          onSubmitEditing={() => Keyboard.dismiss()}
-          autoCorrect={false}
-        />
+        <TextInput style={styles.searchInput} placeholder="Search notes, topics..." placeholderTextColor="#A09E9F" value={searchQuery} onChangeText={setSearchQuery} returnKeyType="search" onSubmitEditing={() => Keyboard.dismiss()} autoCorrect={false} />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={styles.clearSearchBtn}>
-            <Text style={styles.clearSearchText}>✕</Text>
-          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={styles.clearSearchBtn}><Text style={styles.clearSearchText}>✕</Text></TouchableOpacity>
         )}
       </View>
     </View>
@@ -231,31 +183,24 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
 
   const renderScrollableHeader = () => (
     <View style={{ paddingTop: 6 }}>
+      
+      {/* 🚀 NAYA: Streak Widget Wapas Aa Gaya! */}
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
 
-      {/* 🚀 NAYA: Focus Read Banner injected right below streak widget */}
-      <FocusReadBanner onPress={() => onOpenDeepRead(null)} />
+      <FocusReadBanner onPress={handleOpenFocusRead} />
 
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>Knowledge Vault</Text>
-          <Text style={styles.sectionSubtitle}>
-            {allSubjects.length - 1} collections · {notes.length} notes total
-          </Text>
+          <Text style={styles.sectionSubtitle}>{allSubjects.length - 1} collections · {notes.length} notes total</Text>
         </View>
-        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}>
-          <Text style={styles.seeAllText}>See All</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
       </View>
 
       <View style={styles.collectionsGrid}>
-        <TouchableOpacity
-          style={[styles.glassCardWide, activeSubject === 'All Notes' && styles.glassCardActive]}
-          onPress={() => setActiveSubject('All Notes')}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={[styles.glassCardWide, activeSubject === 'All Notes' && styles.glassCardActive]} onPress={() => setActiveSubject('All Notes')} activeOpacity={0.8}>
           <View style={styles.glassInnerWide}>
             <Feather name="layers" size={28} color="#2D2A2E" />
             <View>
@@ -268,13 +213,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
 
         <View style={styles.collectionsRow}>
           {allSubjects.slice(1).map((subject) => (
-            <CollectionCard
-              key={subject}
-              subject={subject}
-              count={countForSubject(subject)}
-              isActive={activeSubject === subject}
-              onPress={() => setActiveSubject(activeSubject === subject ? 'All Notes' : subject)}
-            />
+            <CollectionCard key={subject} subject={subject} count={countForSubject(subject)} isActive={activeSubject === subject} onPress={() => setActiveSubject(activeSubject === subject ? 'All Notes' : subject)} />
           ))}
         </View>
       </View>
@@ -287,47 +226,21 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
   return (
     <View style={styles.container}>
       {renderStaticHeader()}
-
       {filteredNotes.length === 0 ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          contentContainerStyle={{ paddingBottom: 120 }}
-        >
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 120 }}>
           {renderScrollableHeader()}
           <View style={styles.emptyContainer}>
             <Feather name="inbox" size={56} color="#C8BDBE" style={styles.emptyIcon} />
-            <Text style={styles.emptyText}>
-              {searchQuery ? 'No results found.' : `No notes in ${activeSubject.replace(/^\S+\s/, '')} yet.`}
-            </Text>
-            <Text style={styles.emptySubText}>
-              {searchQuery
-                ? 'Try a different keyword!'
-                : 'Start building your knowledge vault!'}
-            </Text>
+            <Text style={styles.emptyText}>{searchQuery ? 'No results found.' : `No notes in ${activeSubject.replace(/^\S+\s/, '')} yet.`}</Text>
+            <Text style={styles.emptySubText}>{searchQuery ? 'Try a different keyword!' : 'Start building your knowledge vault!'}</Text>
           </View>
         </ScrollView>
       ) : (
-        <FlatList
-          data={filteredNotes}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <NoteCard item={item} onPress={onSelectNote} />
-          )}
-          numColumns={2}
-          ListHeaderComponent={renderScrollableHeader()}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        />
+        <FlatList data={filteredNotes} keyExtractor={(item) => item.id} renderItem={({ item }) => <NoteCard item={item} onPress={onSelectNote} />} numColumns={2} ListHeaderComponent={renderScrollableHeader()} contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
       )}
-
       <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
         <Feather name="edit-2" size={24} color="#FFFFFF" />
       </TouchableOpacity>
-
       <StudygramShareModal visible={showShareModal} onClose={() => setShowShareModal(false)} />
     </View>
   );
@@ -342,78 +255,24 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 8 },
   shareIconBtn: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, alignItems: 'center', justifyContent: 'center' },
   logoutBtn: { backgroundColor: '#FFF0F3', padding: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255, 179, 186, 0.4)', shadowColor: '#FFB3BA', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 2, alignItems: 'center', justifyContent: 'center' },
-
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', marginHorizontal: 20, borderRadius: 18, paddingHorizontal: 16, height: 54, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 },
   searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, fontSize: 16, color: '#2D2A2E', height: '100%' },
   clearSearchBtn: { padding: 5, backgroundColor: '#F0EDE8', borderRadius: 12, width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
   clearSearchText: { fontSize: 11, color: '#8A8788', fontWeight: '900' },
-  
   widgetContainer: { marginBottom: 24, width: '100%', alignItems: 'center' },
-  
-  // 🚀 NAYA: Focus Read Banner Styles
-  focusBanner: {
-    marginHorizontal: 20,
-    marginBottom: 22,
-    borderRadius: 20,
-    backgroundColor: 'rgba(237, 230, 255, 0.75)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(180, 160, 220, 0.35)',
-    shadowColor: '#8B6FBF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.10,
-    shadowRadius: 14,
-    elevation: 3,
-  },
-  focusBannerInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  focusBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  focusBannerIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: 'rgba(200, 185, 240, 0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(180, 160, 220, 0.4)',
-  },
-  focusBannerTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#3A2D5C',
-    letterSpacing: -0.2,
-    marginBottom: 2,
-  },
-  focusBannerSub: {
-    fontSize: 12,
-    color: '#8B7AB5',
-    fontWeight: '600',
-  },
-  focusBannerArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: 'rgba(200, 185, 240, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
+  focusBanner: { marginHorizontal: 20, marginBottom: 22, borderRadius: 20, backgroundColor: 'rgba(237, 230, 255, 0.75)', borderWidth: 1.5, borderColor: 'rgba(180, 160, 220, 0.35)', shadowColor: '#8B6FBF', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.10, shadowRadius: 14, elevation: 3 },
+  focusBannerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16 },
+  focusBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  focusBannerIconWrap: { width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(200, 185, 240, 0.5)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(180, 160, 220, 0.4)' },
+  focusBannerTitle: { fontSize: 15, fontWeight: '800', color: '#3A2D5C', letterSpacing: -0.2, marginBottom: 2 },
+  focusBannerSub: { fontSize: 12, color: '#8B7AB5', fontWeight: '600' },
+  focusBannerArrow: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(200, 185, 240, 0.4)', alignItems: 'center', justifyContent: 'center' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: 20, marginBottom: 14 },
   sectionTitle: { fontSize: 22, fontWeight: '800', color: '#2D2A2E', letterSpacing: -0.3, marginBottom: 2 },
   sectionSubtitle: { fontSize: 13, color: '#8A8788', fontWeight: '600' },
   seeAllText: { fontSize: 14, color: '#B5838D', fontWeight: '700' },
   collectionsGrid: { paddingHorizontal: 20, marginBottom: 8 },
-
   glassCardWide: { width: '100%', height: 76, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 24, marginBottom: 14, justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,1)', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.04, shadowRadius: 16, elevation: 3 },
   glassInnerWide: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, gap: 14 },
   collectionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
@@ -425,10 +284,8 @@ const styles = StyleSheet.create({
   glassSubjectName: { fontSize: 16, fontWeight: '800', color: '#2D2A2E', letterSpacing: -0.2 },
   glassNoteCount: { fontSize: 12, color: '#8A8788', fontWeight: '600' },
   activeDot: { position: 'absolute', top: 16, right: 16, width: 10, height: 10, borderRadius: 5, backgroundColor: '#B5838D', borderWidth: 2, borderColor: '#FFF' },
-
   divider: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)', marginHorizontal: 20, marginTop: 8, marginBottom: 24 },
   listContainer: { paddingHorizontal: 12, paddingBottom: 120 },
-
   notebookCard: { flex: 0.5, margin: 6, borderRadius: 16, minHeight: 175, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 6, flexDirection: 'row', overflow: 'hidden' },
   binderStrip: { width: 18, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'space-evenly', alignItems: 'center', borderRightWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
   binderHole: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#FDFBF7' },
@@ -439,12 +296,10 @@ const styles = StyleSheet.create({
   cardSnippet: { fontSize: 12, color: '#777', flex: 1, lineHeight: 18 },
   footer: { marginTop: 'auto', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 7 },
   cardDate: { fontSize: 10, color: '#999', fontWeight: '600' },
-  
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingTop: 20, paddingBottom: 60 },
   emptyIcon: { marginBottom: 14 },
   emptyText: { fontSize: 17, color: '#2D2A2E', fontWeight: '700', textAlign: 'center', marginBottom: 6 },
   emptySubText: { fontSize: 14, color: '#8A8788', textAlign: 'center', lineHeight: 20 },
-  
   fab: { position: 'absolute', right: 22, bottom: 38, backgroundColor: '#2D2A2E', width: 62, height: 62, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 10 },
 });
-          
+  
