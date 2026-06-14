@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,29 +7,58 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_STREAK = 12;
-const MOCK_PROGRESS = 0.625; // 2.5h of 4h
-const MOCK_HOURS_DONE = 2.5;
-const MOCK_HOURS_GOAL = 4;
-
+// ─── Motivational Quotes ──────────────────────────────────────────────────
 const MOTIVATIONAL_TEXTS = [
   'keep showing up for yourself.',
   'small steps, every single day.',
   'you are doing better than you know.',
   'consistency is quiet magic.',
 ];
-const QUOTE = MOTIVATIONAL_TEXTS[new Date().getDay() % MOTIVATIONAL_TEXTS.length];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function DailyStreakWidget() {
+  const [streak, setStreak] = useState(0);
+  const [quote] = useState(MOTIVATIONAL_TEXTS[new Date().getDay() % MOTIVATIONAL_TEXTS.length]);
+  
+  // App's actual mock logic for visual representation
+  const [hoursDone] = useState((Math.random() * 2 + 1).toFixed(1)); 
+  const HOURS_GOAL = 4;
+  const progressRatio = hoursDone / HOURS_GOAL;
+
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(10)).current;
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
+
+  // 🚀 NAYA: "No Punishment" Streak Logic (Cumulative Tracker)
+  useEffect(() => {
+    const calculateCumulativeStreak = async () => {
+      try {
+        const lastOpenDate = await AsyncStorage.getItem('@lumina_last_open_date');
+        const currentStreakStr = await AsyncStorage.getItem('@lumina_cumulative_streak');
+        
+        let currentStreak = currentStreakStr ? parseInt(currentStreakStr, 10) : 0;
+        const today = new Date().toDateString();
+
+        if (lastOpenDate !== today) {
+          // It's a new day! No matter how many days they missed, we just add +1. No resets!
+          currentStreak += 1;
+          await AsyncStorage.setItem('@lumina_last_open_date', today);
+          await AsyncStorage.setItem('@lumina_cumulative_streak', currentStreak.toString());
+        }
+
+        setStreak(currentStreak);
+      } catch (error) {
+        console.log('Error calculating streak:', error);
+      }
+    };
+
+    calculateCumulativeStreak();
+  }, []);
 
   useEffect(() => {
     // Entrance: fade + slide up
@@ -56,13 +85,13 @@ export default function DailyStreakWidget() {
 
     // Progress bar fill — slight delay for effect
     Animated.timing(progressAnim, {
-      toValue: MOCK_PROGRESS,
+      toValue: progressRatio,
       duration: 1100,
       delay: 300,
       easing: Easing.out(Easing.exp),
-      useNativeDriver: false, // width animation needs layout driver
+      useNativeDriver: false, 
     }).start();
-  }, []);
+  }, [progressRatio]);
 
   // Interpolate progress to percentage width string
   const progressWidth = progressAnim.interpolate({
@@ -71,7 +100,7 @@ export default function DailyStreakWidget() {
   });
 
   // Streak badge color: shifts warmer as streak grows
-  const streakIsHot = MOCK_STREAK >= 7;
+  const streakIsHot = streak >= 7;
 
   return (
     <Animated.View
@@ -93,13 +122,13 @@ export default function DailyStreakWidget() {
           <Text style={styles.greetingTitle}>Daily Goal</Text>
         </View>
 
-        {/* Streak Badge */}
+        {/* 🚀 Streak Badge (Now Unbreakable!) */}
         <View style={[styles.streakBadge, streakIsHot && styles.streakBadgeHot]}>
           <Text style={styles.streakIcon}>{streakIsHot ? '🔥' : '✨'}</Text>
           <Text style={[styles.streakNumber, streakIsHot && styles.streakNumberHot]}>
-            {MOCK_STREAK}
+            {streak}
           </Text>
-          <Text style={styles.streakLabel}>day{MOCK_STREAK !== 1 ? 's' : ''}</Text>
+          <Text style={styles.streakLabel}>day{streak !== 1 ? 's' : ''}</Text>
         </View>
       </View>
 
@@ -111,10 +140,10 @@ export default function DailyStreakWidget() {
         {/* Time labels */}
         <View style={styles.progressLabelRow}>
           <View style={styles.progressLabelLeft}>
-            <Text style={styles.hoursValue}>{MOCK_HOURS_DONE}h</Text>
+            <Text style={styles.hoursValue}>{hoursDone}h</Text>
             <Text style={styles.hoursUnit}> focused</Text>
           </View>
-          <Text style={styles.hoursGoal}>Goal: {MOCK_HOURS_GOAL}h</Text>
+          <Text style={styles.hoursGoal}>Goal: {HOURS_GOAL}h</Text>
         </View>
 
         {/* Track */}
@@ -145,7 +174,7 @@ export default function DailyStreakWidget() {
               key={tick}
               style={[
                 styles.tick,
-                MOCK_PROGRESS >= tick && styles.tickFilled,
+                progressRatio >= tick && styles.tickFilled,
               ]}
             />
           ))}
@@ -156,20 +185,20 @@ export default function DailyStreakWidget() {
       <View style={styles.statsRow}>
         <StatChip
           label="Sessions"
-          value={Math.round(MOCK_PROGRESS * 4)}
+          value={Math.round(progressRatio * 4)}
           suffix="/4"
           color="#FFB3BA"
         />
         <View style={styles.statsDivider} />
         <StatChip
           label="Remaining"
-          value={`${(MOCK_HOURS_GOAL - MOCK_HOURS_DONE).toFixed(1)}h`}
+          value={`${(HOURS_GOAL - parseFloat(hoursDone)).toFixed(1)}h`}
           color="#B5D8FF"
         />
         <View style={styles.statsDivider} />
         <StatChip
           label="Best Streak"
-          value="21"
+          value={streak < 21 ? '21' : streak} 
           suffix=" 🏆"
           color="#FFD700"
         />
@@ -178,7 +207,7 @@ export default function DailyStreakWidget() {
       {/* ── Bottom motivational text ── */}
       <View style={styles.quoteRow}>
         <View style={styles.quoteLine} />
-        <Text style={styles.quoteText}>{QUOTE}</Text>
+        <Text style={styles.quoteText}>{quote}</Text>
         <View style={styles.quoteLine} />
       </View>
     </Animated.View>
