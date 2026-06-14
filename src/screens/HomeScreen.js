@@ -130,9 +130,17 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout 
     return matchesSubject && matchesSearch;
   });
 
+  // 🚀 NAYA FIX: Accurate Folder Note Count Fix!
   function countForSubject(subject) {
     if (subject === 'All Notes') return notes.length;
-    return notes.filter(n => n.folder === subject).length;
+    
+    // Remove emoji and spaces to get clean subject text (e.g., "📓 Physics" -> "physics")
+    const cleanSubject = subject.replace(/^\S+\s/, '').toLowerCase().trim();
+    
+    return notes.filter(n => {
+      const noteFolder = (n.folder || '').toLowerCase().trim();
+      return noteFolder.includes(cleanSubject) || cleanSubject.includes(noteFolder);
+    }).length;
   }
 
   const recentHeader = () => {
