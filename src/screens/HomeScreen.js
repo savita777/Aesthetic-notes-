@@ -12,6 +12,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
@@ -59,6 +60,7 @@ function CollectionCard({ subject, count, isActive, onPress }) {
         ]}
       >
         <View style={styles.glassInner}>
+          {/* 📓 CONTENT EMOJI — kept untouched, part of SUBJECT_GLASS dictionary */}
           <Text style={styles.glassEmoji}>{palette.emoji}</Text>
 
           <View style={styles.glassMeta}>
@@ -95,6 +97,7 @@ function NoteCard({ item, onPress }) {
 
       <View style={styles.notebookContent}>
         <View style={styles.notebookLabel}>
+          {/* 📝 CONTENT EMOJI — kept untouched, comes from item.folder */}
           <Text style={styles.labelSubject}>{item.folder || '📝 Journal'}</Text>
         </View>
         <Text style={styles.cardTitle} numberOfLines={2}>
@@ -170,18 +173,18 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout 
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
-            <Text style={styles.shareIconText}>📸</Text>
+            <Feather name="camera" size={18} color="#2D2A2E" />
           </TouchableOpacity>
           {/* 🚀 NAYA: Logout Button */}
           <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
-            <Text style={styles.logoutBtnText}>🚪</Text>
+            <Feather name="log-out" size={18} color="#D9534F" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Floating Search Bar */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Feather name="search" size={18} color="#A09E9F" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search notes, topics..."
@@ -227,7 +230,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout 
           activeOpacity={0.8}
         >
           <View style={styles.glassInnerWide}>
-            <Text style={styles.glassEmojiWide}>🗂</Text>
+            <Feather name="layers" size={28} color="#2D2A2E" />
             <View>
               <Text style={styles.glassSubjectName}>All Notes</Text>
               <Text style={styles.glassNoteCount}>{notes.length} notes across all vaults</Text>
@@ -268,7 +271,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout 
         >
           {renderScrollableHeader()}
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🪹</Text>
+            <Feather name="inbox" size={56} color="#C8BDBE" style={styles.emptyIcon} />
             <Text style={styles.emptyText}>
               {searchQuery ? 'No results found.' : `No notes in ${activeSubject.replace(/^\S+\s/, '')} yet.`}
             </Text>
@@ -296,7 +299,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout 
       )}
 
       <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
-        <Text style={styles.fabText}>✏️</Text>
+        <Feather name="edit-2" size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
       <StudygramShareModal visible={showShareModal} onClose={() => setShowShareModal(false)} />
@@ -351,8 +354,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shareIconText: { fontSize: 16 },
   logoutBtn: {
     backgroundColor: '#FFF0F3', // Soft red background for logout
     padding: 12,
@@ -364,9 +368,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutBtnText: { fontSize: 16 },
-  
+
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -383,7 +388,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 2,
   },
-  searchIcon: { fontSize: 18, marginRight: 10 },
+  searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, fontSize: 16, color: '#2D2A2E', height: '100%' },
   clearSearchBtn: {
     padding: 5,
@@ -452,7 +457,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     gap: 14,
   },
-  glassEmojiWide: { fontSize: 32 },
   collectionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -600,7 +604,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 60,
   },
-  emptyIcon: { fontSize: 56, marginBottom: 14 },
+  emptyIcon: { marginBottom: 14 },
   emptyText: {
     fontSize: 17,
     color: '#2D2A2E',
@@ -630,6 +634,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 10,
   },
-  fabText: { fontSize: 26, marginLeft: 2 },
 });
           
