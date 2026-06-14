@@ -15,6 +15,9 @@ import DraggableSticker from '../components/DraggableSticker';
 import AestheticPomodoro from '../components/AestheticPomodoro';
 import AiSparkModal from '../components/AiSparkModal';
 
+// 🚀 NAYA: Audio Modules Import (Notability style)
+import { MicButton, AudioPlaybackPill } from '../components/AudioRecorder';
+
 import { supabase } from '../../supabase';
 
 const { width, height } = Dimensions.get('window');
@@ -31,6 +34,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   const [showAiModal, setShowAiModal] = useState(false);
   const [placedItems, setPlacedItems] = useState([]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
+  
+  const [audioUri, setAudioUri] = useState(null); // 🚀 NAYA: Audio State
 
   const [isAiThinking, setIsAiThinking] = useState(false);
 
@@ -51,6 +56,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       setFolder(note.folder || '');
       setDoodle(note.doodle || null);
       setPlacedItems(note.placedItems || []);
+      setAudioUri(note.audioUri || null); // 🚀 NAYA: Load saved audio
       setTimeout(() => richEditorRef.current?.setContentHTML(note.content), 100);
     } else {
       const loadDraft = async () => {
@@ -64,6 +70,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
             if (parsedDraft.noteColor) setNoteColor(parsedDraft.noteColor);
             if (parsedDraft.doodle) setDoodle(parsedDraft.doodle);
             if (parsedDraft.placedItems) setPlacedItems(parsedDraft.placedItems);
+            if (parsedDraft.audioUri) setAudioUri(parsedDraft.audioUri); // 🚀 NAYA: Load audio from draft
             console.log("✅ Purana Data (Draft) Wapas Aa Gaya!");
             setTimeout(() => richEditorRef.current?.setContentHTML(parsedDraft.content || ''), 100);
           }
@@ -77,7 +84,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
 
   const saveDraftLocally = async () => {
     try {
-      const draftData = { title, content, folder, noteColor, doodle, placedItems, timestamp: Date.now() };
+      // 🚀 NAYA: Included audioUri in draftData
+      const draftData = { title, content, folder, noteColor, doodle, placedItems, audioUri, timestamp: Date.now() };
       await AsyncStorage.setItem('@lumina_draft', JSON.stringify(draftData));
     } catch (error) {
       console.error("Auto-save fail ho gaya:", error);
@@ -90,7 +98,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       if (title || content) saveDraftLocally();
     }, 5000);
     return () => clearTimeout(autoSaveTimer.current);
-  }, [title, content, folder, noteColor, doodle, placedItems]);
+  }, [title, content, folder, noteColor, doodle, placedItems, audioUri]); // 🚀 NAYA: Added audioUri dependency
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -99,7 +107,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       }
     });
     return () => subscription.remove();
-  }, [title, content, folder, noteColor, doodle, placedItems]);
+  }, [title, content, folder, noteColor, doodle, placedItems, audioUri]); // 🚀 NAYA: Added audioUri dependency
 
   // 🚀 NAYA: FIXED DELETE FUNCTION - Ab yeh seedha App.js ka function call karega
   const handleDelete = () => {
@@ -337,7 +345,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
             style={styles.saveBtn} 
             onPress={async () => {
               await AsyncStorage.removeItem('@lumina_draft'); 
-              onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems);
+              // 🚀 NAYA: Passed audioUri to onSave function
+              onSave(title, content, noteColor, folder || 'Notes', doodle, placedItems, audioUri);
             }}>
             <Text style={styles.saveBtnText}>Save</Text>
           </TouchableOpacity>
@@ -365,6 +374,11 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
             <Text style={styles.aiBtnText}>✨ AI Spark</Text>
           </TouchableOpacity>
           <View style={styles.verticalDivider} />
+
+          {/* 🚀 NAYA: Mic Button UI Injection */}
+          <MicButton onRecordingComplete={(uri) => setAudioUri(uri)} />
+          <View style={styles.verticalDivider} />
+
           <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}>
             <Text style={styles.pomodoroBtnText}>⏱️ Focus</Text>
           </TouchableOpacity>
@@ -415,6 +429,9 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
                ))}
             </View>
             
+            {/* 🚀 NAYA: Audio Pill Injection Right above Text */}
+            <AudioPlaybackPill uri={audioUri} onDelete={() => setAudioUri(null)} />
+
             <RichEditor
               ref={richEditorRef}
               initialContentHTML={content}
@@ -427,6 +444,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
                 placeholderColor: '#A09E9F',
                 cssText: `
                   body { font-family: -apple-system, 'Georgia', serif; font-size: 17px; line-height: 35px; margin: 0; padding: 0; }
+                  h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; padding: 0; }
                   h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; padding-left: 20px; line-height: 35px; }
                   blockquote { border-left: 3px solid #B5838D; padding-left: 10px; color: #6E6B70; font-style: italic; margin: 0; }
                 `
