@@ -4,7 +4,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system'; // 🚀 NAYA: Image ko Base64 mein convert karne ke liye
+import * as FileSystem from 'expo-file-system'; 
 import { Feather } from '@expo/vector-icons';
 
 // True Rich Text Engine Imports
@@ -13,7 +13,6 @@ import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor'
 import { Colors } from '../theme/colors';
 import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
-import AestheticPomodoro from '../components/AestheticPomodoro';
 import AiSparkModal from '../components/AiSparkModal';
 
 // 🚀 NAYA: Audio Modules Import (Notability style)
@@ -31,7 +30,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   const [folder, setFolder] = useState(''); 
   const [doodle, setDoodle] = useState(null);
   const [showDraw, setShowDraw] = useState(false);
-  const [showPomodoro, setShowPomodoro] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [placedItems, setPlacedItems] = useState([]);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
@@ -386,11 +384,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
           <MicButton onRecordingComplete={(uri) => setAudioUri(uri)} />
           <View style={styles.verticalDivider} />
 
-          <TouchableOpacity onPress={() => setShowPomodoro(true)} style={styles.pomodoroBtn}>
-            <Feather name="clock" size={14} color="#2D2A2E" />
-            <Text style={styles.pomodoroBtnText}>Focus</Text>
-          </TouchableOpacity>
-          <View style={styles.verticalDivider} />
           <TouchableOpacity onPress={applyHighlight} style={styles.highlightBtn}>
             <Feather name="edit-3" size={14} color="#2D2A2E" />
             <Text style={styles.highlightBtnText}>Mark</Text>
@@ -517,16 +510,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         }} 
       />
 
-      <Modal visible={showPomodoro} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: '#FAF8F5' }}>
-          <TouchableOpacity style={styles.closePomodoroBtn} onPress={() => setShowPomodoro(false)}>
-            <Feather name="x" size={14} color="#2D2A2E" />
-            <Text style={styles.closePomodoroText}>Close Timer</Text>
-          </TouchableOpacity>
-          <AestheticPomodoro />
-        </View>
-      </Modal>
-
       <AiSparkModal visible={showAiModal} onClose={() => setShowAiModal(false)} onSelectAction={handleAiAction} />
     </KeyboardAvoidingView>
   );
@@ -551,10 +534,6 @@ const styles = StyleSheet.create({
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
   aiBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#2D2A2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5, shadowColor: '#2D2A2E', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 3, elevation: 3 },
   aiBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-  pomodoroBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFB3BA', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
-  pomodoroBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
-  closePomodoroBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, position: 'absolute', top: 40, right: 20, zIndex: 10, paddingVertical: 8, paddingHorizontal: 15, backgroundColor: '#FFFFFF', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5, borderWidth: 1, borderColor: '#EAE6E1' },
-  closePomodoroText: { fontSize: 13, fontWeight: '800', color: '#2D2A2E', letterSpacing: 0.5 },
   highlightBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FDFD96', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginRight: 5 },
   highlightBtnText: { color: '#2D2A2E', fontWeight: 'bold', fontSize: 13 },
   toolLabel: { fontSize: 12, fontWeight: 'bold', color: '#A09E9F', marginHorizontal: 5 },
