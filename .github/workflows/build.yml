@@ -21,10 +21,12 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      # 🚀 NAYA UPDATE: Force Install to bypass conflicts & Auto-Fix Expo packages
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm install --legacy-peer-deps
+          npx expo install --fix
 
-      # 🚀 NAYA UPDATE: Pehle purana android folder delete karo, phir fresh prebuild karo
       - name: Build Android Native Code (Prebuild)
         run: |
           rm -rf android
