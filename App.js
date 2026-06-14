@@ -8,6 +8,9 @@ import AuthScreen from './AuthScreen';
 
 import HomeScreen from './src/screens/HomeScreen';
 import NoteScreen from './src/screens/NoteScreen';
+// 🚀 NAYA: Import DeepReadScreen
+import DeepReadScreen from './src/screens/DeepReadScreen';
+
 import { Colors } from './src/theme/colors';
 
 // 🛡️ NAYA: Humara Vault Gate Import kiya gaya
@@ -36,6 +39,9 @@ export default function App() {
   const [notes, setNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('home'); 
   const [selectedNote, setSelectedNote] = useState(null);
+  
+  // 🚀 NAYA: Deep Read Mode State
+  const [deepReadUri, setDeepReadUri] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
@@ -65,7 +71,6 @@ export default function App() {
     }
   }, [session]);
 
-  // 🚀 NAYA: Secure Logout Function
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -117,13 +122,14 @@ export default function App() {
     return `${dateStr} 🎀 - ${timeStr}`;
   };
 
-  const handleSaveNote = async (title, content, color, folder, doodle, placedItems) => {
+  // 🚀 NAYA: Modified to accept audioUri as well (from NoteScreen)
+  const handleSaveNote = async (title, content, color, folder, doodle, placedItems, audioUri) => {
     let updatedNotes = [...notes];
     const aestheticDate = getAestheticDate();
     
     const newNote = {
       id: Date.now().toString(),
-      title, content, color, folder: folder || '📔 Diary', doodle, placedItems, date: aestheticDate
+      title, content, color, folder: folder || '📔 Diary', doodle, placedItems, audioUri, date: aestheticDate
     };
 
     let isExistingNote = false;
@@ -131,7 +137,7 @@ export default function App() {
     if (selectedNote) {
       isExistingNote = true;
       updatedNotes = notes.map(n => n.id === selectedNote.id ? { 
-        ...n, title, content, color, folder, doodle, placedItems, date: aestheticDate 
+        ...n, title, content, color, folder, doodle, placedItems, audioUri, date: aestheticDate 
       } : n);
     } else {
       updatedNotes.unshift(newNote); 
@@ -148,14 +154,13 @@ export default function App() {
             color: color || "#FDF6F5",
             folder: folder || "📔 Diary"
           })
-          .eq('id', selectedNote.id) // Assuming id matches
-          .eq('user_id', session?.user?.id); // Extra security
+          .eq('id', selectedNote.id) 
+          .eq('user_id', session?.user?.id); 
 
         if (error) console.log("Cloud Update Error ❌:", error);
         else console.log("Note Cloud par Update ho gaya! ✅☁️");
 
       } else {
-        // Naya Note Insert karo
         const { error } = await supabase
           .from('notes')
           .insert([
@@ -182,14 +187,11 @@ export default function App() {
     setSelectedNote(null);
   };
 
-  // 🚀 NAYA: MASTER DELETE FUNCTION
   const handleDeleteNote = async (noteId) => {
-    // 1. Turant Home screen se gayab karo (Local UI Update)
     const updatedNotes = notes.filter(n => n.id !== noteId);
     setNotes(updatedNotes);
     await AsyncStorage.setItem('@aesthetic_notes', JSON.stringify(updatedNotes));
 
-    // 2. Cloud se hamesha ke liye uda do
     try {
       await supabase.from('notes').delete().eq('id', noteId).eq('user_id', session?.user?.id);
       console.log("✅ Note fully deleted from Cloud!");
@@ -197,7 +199,6 @@ export default function App() {
       console.log("Delete error:", err);
     }
 
-    // 3. Wapas Home screen par jao
     setCurrentScreen('home');
     setSelectedNote(null);
   };
@@ -206,30 +207,34 @@ export default function App() {
     return <SplashLoader />;
   }
 
-  // ✅ Yahi wo jageh hai jahan Login dikhta hai! (Agar session null ho)
   if (!session) {
     return <AuthScreen />;
   }
 
-  // ✅ 🚀 CLEAN & FULLY MERGED NAVIGATION
   return (
-    // 🛡️ NAYA: PrivacyGate se puri app wrap ho gayi hai. Lock screen ke baad hi children render honge.
     <PrivacyGate session={session}>
       <SafeAreaView style={styles.container}>
         <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
         
+        {/* 🚀 NAYA: Manual Screen Switcher modified for DeepRead */}
         {currentScreen === 'home' ? (
           <HomeScreen 
             notes={notes}
             onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
             onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
-            onLogout={handleLogout} // 🚀 NAYA: Logout ka connection Home Screen ko de diya
+            onLogout={handleLogout}
+            onOpenDeepRead={(uri) => { setDeepReadUri(uri); setCurrentScreen('deepRead'); }} 
           />
+        ) : currentScreen === 'deepRead' ? (                                                
+          <DeepReadScreen                                                                   
+            pdfUri={deepReadUri}                                                            
+            onBack={() => { setCurrentScreen('home'); setDeepReadUri(null); }}              
+          />                                                                                
         ) : (
           <NoteScreen 
             note={selectedNote}
             onSave={handleSaveNote}
-            onDelete={handleDeleteNote} // 🚀 NAYA: Delete function passed to NoteScreen
+            onDelete={handleDeleteNote} 
             onBack={() => { setCurrentScreen('home'); setSelectedNote(null); }}
           />
         )}
