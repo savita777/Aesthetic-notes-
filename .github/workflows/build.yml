@@ -24,8 +24,11 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      # 🚀 NAYA UPDATE: Pehle purana android folder delete karo, phir fresh prebuild karo
       - name: Build Android Native Code (Prebuild)
-        run: npx expo prebuild --platform android --clean
+        run: |
+          rm -rf android
+          npx expo prebuild --platform android --clean
 
       - name: Compile APK
         working-directory: android
