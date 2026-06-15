@@ -55,8 +55,6 @@ function useAudioRecorder({ onRecordingComplete }) {
     if (!hasPermissions) return;
 
     try {
-      // 🚀 THE FIX: Android ke native MediaRecorder ko 'file://' se problem hoti hai.
-      // Isliye hum FileSystem.cacheDirectory me se usko replace kar rahe hain.
       let dir = FileSystem.cacheDirectory;
       if (Platform.OS === 'android') {
         dir = dir.replace('file://', ''); 
@@ -76,7 +74,6 @@ function useAudioRecorder({ onRecordingComplete }) {
       
       setIsRecording(true);
     } catch (err) {
-      // 🚨 AGAR KUCH GALAT HUA TOH AB SCREEN PAR DIKHEGA!
       console.error("Start Error: ", err);
       Alert.alert("Engine Error 🛑", String(err.message || err));
       setIsRecording(false);
@@ -188,10 +185,16 @@ function useAudioPlayer(uri) {
   return { isPlaying, position, duration, togglePlayback, seek };
 }
 
+// ─────────────────────────────────────────────────────────────
+// 🚀 FIXED: React hook rules ab tootenge nahi!
+// ─────────────────────────────────────────────────────────────
 export function AudioPlaybackPill({ uri, onDelete }) {
   const { isPlaying, position, duration, togglePlayback, seek } = useAudioPlayer(uri);
   const slideY = useRef(new Animated.Value(-72)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  
+  // barRef ko humne top level pe declare kiya hai, condition se pehle
+  const barRef = useRef(null);
 
   useEffect(() => {
     if (uri) {
@@ -204,11 +207,12 @@ export function AudioPlaybackPill({ uri, onDelete }) {
     }
   }, [uri]);
 
+  // Early return ALWAYS hooks ke declare hone ke baad hota hai
   if (!uri) return null;
+  
   const progress = duration > 0 ? position / duration : 0;
   const elapsed = formatDuration(Math.floor(position / 1000));
   const total = formatDuration(Math.floor(duration / 1000));
-  const barRef = useRef(null);
 
   return (
     <Animated.View style={[pillStyles.pill, { transform: [{ translateY: slideY }], opacity }]}>
