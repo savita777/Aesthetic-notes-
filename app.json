@@ -36,12 +36,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Allow Lumina Notes to access your microphone to record audio notes."
-        }
-      ],
       "expo-document-picker"
     ]
   }
