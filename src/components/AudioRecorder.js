@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
 
 const L = {
@@ -8,12 +9,17 @@ const L = {
   accentSoft: '#F2E8EA', text: '#2D2A2E', muted: '#9B9099'
 };
 
+const STOP_RELEASE_DELAY_MS = 600;
+const FILE_READY_MAX_RETRIES = 6;
+const FILE_READY_RETRY_DELAY_MS = 150;
+
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// 🚀 CLAUDE'S NEW VANILLA RECORDER HOOK
 function useAudioRecorder({ onRecordingComplete }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
@@ -24,9 +30,7 @@ function useAudioRecorder({ onRecordingComplete }) {
   useEffect(() => {
     return () => {
       clearInterval(timerRef.current);
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
-      }
+      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
     };
   }, []);
 
@@ -37,30 +41,26 @@ function useAudioRecorder({ onRecordingComplete }) {
         permission = await Audio.requestPermissionsAsync();
       }
       if (permission.status !== 'granted') {
-        Alert.alert('Permission Denied', 'Mic access needed.');
+        Alert.alert('Permission Denied', 'Microphone access is needed for Audio Notes.');
         return;
       }
-      
-      await Audio.setAudioModeAsync({ 
-        allowsRecordingIOS: true, 
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false
-      });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      
+      // 🚫 NO Audio.setAudioModeAsync() 
+      // 🚫 NO HIGH_QUALITY (Using LOW_QUALITY to prevent encoder crash)
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.LOW_QUALITY);
+
       recordingRef.current = recording;
       setIsRecording(true);
       setElapsed(0);
       timerRef.current = setInterval(() => setElapsed((prev) => prev + 1), 1000);
-      
-    } catch (err) { 
-      console.log("Start Error: ", err);
+
+    } catch (err) {
+      console.log("Mic Hardware Locked/Error: ", err);
       setIsRecording(false);
+      Alert.alert(
+        'Mic is Busy 🎙️',
+        'Aapke phone ka microphone abhi hardware level par lock hai. Kripya phone ko ek baar restart karein.'
+      );
     }
   }, []);
 
@@ -77,24 +77,30 @@ function useAudioRecorder({ onRecordingComplete }) {
     try {
       await recording.stopAndUnloadAsync();
     } catch (err) {
-      console.log("Stop Error: ", err);
+      console.log("stopAndUnloadAsync error: ", err);
     }
 
     try {
       uri = recording.getURI();
     } catch (err) {
-      console.log("URI Error: ", err);
+      console.log("getURI error: ", err);
     }
 
-    // 🚀 Wait for Android to free the memory before showing the Player
+    // ✅ Safety delay before handing off the uri
     setTimeout(() => {
-      recordingRef.current = null;
-      setIsReleasing(false);
-      if (uri) {
-        onRecordingComplete(uri);
+      if (recordingRef.current === recording) {
+        recordingRef.current = null;
       }
-    }, 600);
+      setIsReleasing(false);
 
+      if (uri) {
+        try {
+          onRecordingComplete(uri);
+        } catch (err) {
+          console.log("onRecordingComplete error: ", err);
+        }
+      }
+    }, STOP_RELEASE_DELAY_MS);
   }, [onRecordingComplete]);
 
   return { isRecording, isReleasing, elapsed, startRecording, stopRecording };
@@ -146,8 +152,22 @@ export function MicButton({ onRecordingComplete }) {
   );
 }
 
-// 🚀 LAZY AUDIO PLAYER: Ye crash ko jad se khatam karega.
-// Ab file tab tak load nahi hogi jab tak aap 'Play' nahi dabaoge.
+// 🚀 LAZY PLAYER (No Auto-Load)
+async function waitUntilFileReady(path, retries = FILE_READY_MAX_RETRIES, delayMs = FILE_READY_RETRY_DELAY_MS) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const info = await FileSystem.getInfoAsync(path);
+      if (info.exists && (info.size === undefined || info.size > 0)) {
+        return true;
+      }
+    } catch (err) {
+      console.log("waitUntilFileReady check error: ", err);
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+}
+
 function useLazyAudioPlayer(uri) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
@@ -165,7 +185,6 @@ function useLazyAudioPlayer(uri) {
   const togglePlayback = useCallback(async () => {
     if (!uri) return;
 
-    // Agar pehle se load ho chuka hai, toh normal Play/Pause karo
     if (isLoaded && soundRef.current) {
       if (isPlaying) {
         await soundRef.current.pauseAsync();
@@ -175,9 +194,15 @@ function useLazyAudioPlayer(uri) {
       return;
     }
 
-    // Agar load NAHI hua hai (First Time tap), toh ab aaram se load karo
     setIsLoading(true);
     try {
+      const ready = await waitUntilFileReady(uri);
+      if (!ready) {
+        console.log("Audio file not accessible yet");
+        setIsLoading(false);
+        return;
+      }
+
       const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true }, (status) => {
         if (status.isLoaded) {
           setPosition(status.positionMillis || 0);
@@ -275,4 +300,4 @@ const pillStyles = StyleSheet.create({
   scrubberTrack: { height: 4, backgroundColor: L.border, borderRadius: 2, position: 'relative' }, scrubberFill: { height: 4, backgroundColor: L.accent, borderRadius: 2, position: 'absolute', left: 0, top: 0 }, scrubberThumb: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, backgroundColor: L.accent, marginLeft: -6, shadowColor: L.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   deleteBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: L.card, alignItems: 'center', justifyContent: 'center' },
 });
-                                                                 
+        
