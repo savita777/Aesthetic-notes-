@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+// 🚀 NAYA: FileSystem import kiya crash fix ke liye
+import * as FileSystem from 'expo-file-system'; 
 
 import { Colors } from '../theme/colors';
 import DailyStreakWidget from '../components/DailyStreakWidget';
@@ -128,6 +130,7 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
     }).length;
   }
 
+  // 🚀 NAYA: CRASH FIX - Local Absolute Path logic added
   const handleOpenFocusRead = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -135,7 +138,17 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
         copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        onOpenDeepRead(result.assets[0].uri);
+        let safeUri = result.assets[0].uri;
+        
+        // Convert content:// to an absolute file:// path for Android PDF Viewer
+        if(Platform.OS === 'android' && safeUri.startsWith('content://')){
+          const fileInfo = await FileSystem.getInfoAsync(safeUri);
+          if(fileInfo.exists) {
+            safeUri = fileInfo.uri;
+          }
+        }
+        
+        onOpenDeepRead(safeUri);
       }
     } catch (err) {
       console.log("Error selecting PDF:", err);
@@ -184,7 +197,6 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
   const renderScrollableHeader = () => (
     <View style={{ paddingTop: 6 }}>
       
-      {/* 🚀 NAYA: Streak Widget Wapas Aa Gaya! */}
       <View style={styles.widgetContainer}>
         <DailyStreakWidget />
       </View>
