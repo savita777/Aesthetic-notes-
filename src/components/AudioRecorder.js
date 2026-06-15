@@ -1,17 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
 
 const L = {
   surface: '#FFFFFF', card: '#F2EFE9', border: '#E8E3DB', accent: '#B5838D',
   accentSoft: '#F2E8EA', text: '#2D2A2E', muted: '#9B9099'
 };
-
-const STOP_RELEASE_DELAY_MS = 700;
-const FILE_READY_MAX_RETRIES = 6;
-const FILE_READY_RETRY_DELAY_MS = 150;
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60);
@@ -29,34 +24,34 @@ function useAudioRecorder({ onRecordingComplete }) {
   useEffect(() => {
     return () => {
       clearInterval(timerRef.current);
-      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      }
     };
   }, []);
 
   const startRecording = useCallback(async () => {
     try {
       let permission = await Audio.getPermissionsAsync();
-      
       if (permission.status !== 'granted') {
         permission = await Audio.requestPermissionsAsync();
       }
-
       if (permission.status !== 'granted') {
-        Alert.alert('Permission Denied', 'Microphone access is needed for Audio Notes.');
+        Alert.alert('Permission Denied', 'Mic access needed.');
         return;
       }
       
-      // 🚀 FIX: staysActiveInBackground ko true kiya taaki permission popup
-      // aane par app kill na ho jaye.
       await Audio.setAudioModeAsync({ 
         allowsRecordingIOS: true, 
         playsInSilentModeIOS: true,
-        staysActiveInBackground: true, 
+        staysActiveInBackground: true,
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false
       });
 
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
       
       recordingRef.current = recording;
       setIsRecording(true);
@@ -64,12 +59,8 @@ function useAudioRecorder({ onRecordingComplete }) {
       timerRef.current = setInterval(() => setElapsed((prev) => prev + 1), 1000);
       
     } catch (err) { 
-      console.log("Mic Hardware Locked/Error: ", err);
+      console.log("Start Error: ", err);
       setIsRecording(false);
-      Alert.alert(
-        'Mic is Busy 🎙️', 
-        'Aapke phone ka microphone abhi lock hai. Kripya phone ko ek baar restart karein.'
-      ); 
     }
   }, []);
 
@@ -84,35 +75,26 @@ function useAudioRecorder({ onRecordingComplete }) {
     let uri = null;
 
     try {
-      // Sirf record roko aur OS ko free chhod do
       await recording.stopAndUnloadAsync();
     } catch (err) {
-      console.log("stopAndUnloadAsync error: ", err);
+      console.log("Stop Error: ", err);
     }
-
-    // 🛑 FATAL CRASH FIX: Yahan se "Audio.setAudioModeAsync" HATA DIYA GAYA HAI!
-    // Android par is line ki wajah se seedha Splash Screen par phek raha tha.
 
     try {
       uri = recording.getURI();
     } catch (err) {
-      console.log("getURI error: ", err);
+      console.log("URI Error: ", err);
     }
 
+    // 🚀 Wait for Android to free the memory before showing the Player
     setTimeout(() => {
-      if (recordingRef.current === recording) {
-        recordingRef.current = null;
-      }
+      recordingRef.current = null;
       setIsReleasing(false);
-
       if (uri) {
-        try {
-          onRecordingComplete(uri);
-        } catch (err) {
-          console.log("onRecordingComplete error: ", err);
-        }
+        onRecordingComplete(uri);
       }
-    }, STOP_RELEASE_DELAY_MS);
+    }, 600);
+
   }, [onRecordingComplete]);
 
   return { isRecording, isReleasing, elapsed, startRecording, stopRecording };
@@ -164,90 +146,68 @@ export function MicButton({ onRecordingComplete }) {
   );
 }
 
-async function waitUntilFileReady(path, retries = FILE_READY_MAX_RETRIES, delayMs = FILE_READY_RETRY_DELAY_MS) {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      const info = await FileSystem.getInfoAsync(path);
-      if (info.exists && (info.size === undefined || info.size > 0)) {
-        return true;
-      }
-    } catch (err) {
-      console.log("waitUntilFileReady check error: ", err);
-    }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-  return false;
-}
-
-function useAudioPlayer(uri) {
+// 🚀 LAZY AUDIO PLAYER: Ye crash ko jad se khatam karega.
+// Ab file tab tak load nahi hogi jab tak aap 'Play' nahi dabaoge.
+function useLazyAudioPlayer(uri) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const soundRef = useRef(null);
 
   useEffect(() => {
+    return () => {
+      soundRef.current?.unloadAsync().catch(() => {});
+    };
+  }, []);
+
+  const togglePlayback = useCallback(async () => {
     if (!uri) return;
-    let mounted = true;
-    setIsLoaded(false);
 
-    (async () => {
-      if (soundRef.current) {
-        await soundRef.current.unloadAsync().catch(() => {});
-        soundRef.current = null;
+    // Agar pehle se load ho chuka hai, toh normal Play/Pause karo
+    if (isLoaded && soundRef.current) {
+      if (isPlaying) {
+        await soundRef.current.pauseAsync();
+      } else {
+        await soundRef.current.playAsync();
       }
+      return;
+    }
 
-      const ready = await waitUntilFileReady(uri);
-      if (!mounted) return;
-
-      if (!ready) {
-        console.log("Audio file not accessible yet, skipping load:", uri);
-        return;
-      }
-
-      try {
-        const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false }, (status) => {
-          if (!mounted || !status.isLoaded) return;
+    // Agar load NAHI hua hai (First Time tap), toh ab aaram se load karo
+    setIsLoading(true);
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true }, (status) => {
+        if (status.isLoaded) {
           setPosition(status.positionMillis || 0);
           setDuration(status.durationMillis || 0);
           setIsPlaying(status.isPlaying);
-          if (status.didJustFinish) { setIsPlaying(false); sound.setPositionAsync(0); }
-        });
-
-        if (!mounted) {
-          sound.unloadAsync().catch(() => {});
-          return;
+          if (status.didJustFinish) { 
+            setIsPlaying(false); 
+            sound.setPositionAsync(0); 
+          }
         }
-
-        soundRef.current = sound;
-        setIsLoaded(true);
-      } catch (err) {
-        console.log("Sound.createAsync error: ", err);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      soundRef.current?.unloadAsync().catch(() => {});
-      soundRef.current = null;
-    };
-  }, [uri]);
-
-  const togglePlayback = useCallback(async () => {
-    if (!soundRef.current || !isLoaded) return;
-    isPlaying ? await soundRef.current.pauseAsync() : await soundRef.current.playAsync();
-  }, [isPlaying, isLoaded]);
+      });
+      soundRef.current = sound;
+      setIsLoaded(true);
+    } catch (error) {
+      console.log("Load Audio Error:", error);
+      Alert.alert("Playback Error", "Could not load audio file.");
+    }
+    setIsLoading(false);
+  }, [uri, isLoaded, isPlaying]);
 
   const seek = useCallback(async (fraction) => {
     if (!soundRef.current || !duration) return;
     await soundRef.current.setPositionAsync(fraction * duration);
   }, [duration]);
 
-  return { isPlaying, position, duration, isLoaded, togglePlayback, seek };
+  return { isPlaying, position, duration, isLoaded, isLoading, togglePlayback, seek };
 }
 
 export function AudioPlaybackPill({ uri, onDelete }) {
-  const { isPlaying, position, duration, isLoaded, togglePlayback, seek } = useAudioPlayer(uri);
+  const { isPlaying, position, duration, isLoaded, isLoading, togglePlayback, seek } = useLazyAudioPlayer(uri);
   const slideY = useRef(new Animated.Value(-72)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -270,11 +230,11 @@ export function AudioPlaybackPill({ uri, onDelete }) {
 
   return (
     <Animated.View style={[pillStyles.pill, { transform: [{ translateY: slideY }], opacity }]}>
-      <TouchableOpacity style={[pillStyles.playBtn, isPlaying && pillStyles.playBtnActive]} onPress={togglePlayback} disabled={!isLoaded}>
-        {isLoaded ? (
-          <Feather name={isPlaying ? 'pause' : 'play'} size={14} color={L.accent} />
-        ) : (
+      <TouchableOpacity style={[pillStyles.playBtn, isPlaying && pillStyles.playBtnActive]} onPress={togglePlayback} disabled={isLoading}>
+        {isLoading ? (
           <ActivityIndicator size="small" color={L.accent} />
+        ) : (
+          <Feather name={isPlaying ? 'pause' : 'play'} size={14} color={L.accent} />
         )}
       </TouchableOpacity>
       <View style={{ flex: 1, gap: 5 }}>
@@ -315,4 +275,4 @@ const pillStyles = StyleSheet.create({
   scrubberTrack: { height: 4, backgroundColor: L.border, borderRadius: 2, position: 'relative' }, scrubberFill: { height: 4, backgroundColor: L.accent, borderRadius: 2, position: 'absolute', left: 0, top: 0 }, scrubberThumb: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, backgroundColor: L.accent, marginLeft: -6, shadowColor: L.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   deleteBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: L.card, alignItems: 'center', justifyContent: 'center' },
 });
-        
+                                                                 
