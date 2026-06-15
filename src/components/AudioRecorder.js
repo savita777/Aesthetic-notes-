@@ -9,7 +9,6 @@ const L = {
   accentSoft: '#F2E8EA', text: '#2D2A2E', muted: '#9B9099'
 };
 
-// 🚀 NAYA: Singleton Native Engine (Yeh app ke crash ko completely rokega)
 const audioRecorderPlayer = new AudioRecorderPlayer();
 audioRecorderPlayer.setSubscriptionDuration(0.1); 
 
@@ -19,17 +18,19 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// 🚀 THE FIX: Sirf Microphone Permission maang rahe hain, Storage nahi!
 const requestAndroidPermissions = async () => {
   if (Platform.OS !== 'android') return true;
   try {
-    const grants = await PermissionsAndroid.requestMultiple([
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-      PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-    ]);
-    const allGranted = Object.values(grants).every(status => status === PermissionsAndroid.RESULTS.GRANTED);
-    if (!allGranted) Alert.alert('Permissions Required', 'Microphone access is needed for Audio Notes.');
-    return allGranted;
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+    );
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      return true;
+    } else {
+      Alert.alert('Permissions Required', 'Microphone access is needed for Audio Notes.');
+      return false;
+    }
   } catch (err) {
     console.warn('Permission request error:', err);
     return false;
@@ -55,7 +56,6 @@ function useAudioRecorder({ onRecordingComplete }) {
     if (!hasPermissions) return;
 
     try {
-      // Direct Storage Path Native API ke liye
       const path = Platform.OS === 'android'
         ? `${FileSystem.cacheDirectory}audio_note_${Date.now()}.mp4`
         : `audio_note_${Date.now()}.m4a`;
@@ -91,7 +91,6 @@ function useAudioRecorder({ onRecordingComplete }) {
   return { isRecording, elapsed, startRecording, stopRecording };
 }
 
-// 🎙️ MIC BUTTON (Aapke Design Ke Sath)
 export function MicButton({ onRecordingComplete }) {
   const { isRecording, elapsed, startRecording, stopRecording } = useAudioRecorder({ onRecordingComplete });
   const pulseScale = useRef(new Animated.Value(1)).current;
@@ -125,7 +124,6 @@ export function MicButton({ onRecordingComplete }) {
   );
 }
 
-// 🎵 AUDIO PLAYER NATIVE
 function useAudioPlayer(uri) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
@@ -179,7 +177,6 @@ function useAudioPlayer(uri) {
   return { isPlaying, position, duration, togglePlayback, seek };
 }
 
-// 🎵 AUDIO PILL (Aapke Design Ke Sath)
 export function AudioPlaybackPill({ uri, onDelete }) {
   const { isPlaying, position, duration, togglePlayback, seek } = useAudioPlayer(uri);
   const slideY = useRef(new Animated.Value(-72)).current;
@@ -244,4 +241,4 @@ const pillStyles = StyleSheet.create({
   scrubberTrack: { height: 4, backgroundColor: L.border, borderRadius: 2, position: 'relative' }, scrubberFill: { height: 4, backgroundColor: L.accent, borderRadius: 2, position: 'absolute', left: 0, top: 0 }, scrubberThumb: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, backgroundColor: L.accent, marginLeft: -6, shadowColor: L.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   deleteBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: L.card, alignItems: 'center', justifyContent: 'center' },
 });
-                                                                 
+  
