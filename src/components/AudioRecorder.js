@@ -1,12 +1,25 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import { Feather } from '@expo/vector-icons';
 
 const L = {
   surface: '#FFFFFF', card: '#F2EFE9', border: '#E8E3DB', accent: '#B5838D',
   accentSoft: '#F2E8EA', text: '#2D2A2E', muted: '#9B9099'
 };
+
+// 🚀 RACE-CONDITION FIX: how long to wait after stopAndUnloadAsync() before
+// we even acknowledge the recording is "done". On Android, the OS releases
+// the file handle slightly AFTER the JS promise resolves — if Sound.createAsync
+// fires inside that window, it can hard-crash the app (not just throw a JS error).
+const STOP_RELEASE_DELAY_MS = 700;
+
+// 🚀 Used by AudioPlaybackPill: how many times (and how often) to poll
+// the filesystem to confirm the audio file is fully written + accessible
+// before handing the uri to Audio.Sound.createAsync.
+const FILE_READY_MAX_RETRIES = 6;
+const FILE_READY_RETRY_DELAY_MS = 150;
 
 function formatDuration(seconds) {
   const m = Math.floor(seconds / 60);
@@ -16,6 +29,11 @@ function formatDuration(seconds) {
 
 function useAudioRecorder({ onRecordingComplete }) {
   const [isRecording, setIsRecording] = useState(false);
+  // 🚀 NAYA: "Releasing" state — recording has stopped but we're inside the
+  // safety window waiting for Android to free the file handle. Mic button
+  // stays disabled during this tiny window so the user can't immediately
+  // start a new recording on top of an unreleased session.
+  const [isReleasing, setIsReleasing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const recordingRef = useRef(null);
   const timerRef = useRef(null);
@@ -69,26 +87,68 @@ function useAudioRecorder({ onRecordingComplete }) {
   }, []);
 
   const stopRecording = useCallback(async () => {
+    clearInterval(timerRef.current);
+    setIsRecording(false);
+
+    // Grab a stable local reference — recordingRef.current could theoretically
+    // be overwritten by a fast new startRecording() call during our safety
+    // delay below, and we don't want to nullify someone else's recording.
+    const recording = recordingRef.current;
+    if (!recording) return;
+
+    setIsReleasing(true);
+
+    let uri = null;
+
     try {
-      clearInterval(timerRef.current);
-      setIsRecording(false);
-      if (!recordingRef.current) return;
-      await recordingRef.current.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
-      if (uri) onRecordingComplete(uri);
+      // Step 1: ask the OS to stop + unload the recorder.
+      await recording.stopAndUnloadAsync();
     } catch (err) {
-      console.log("Stop Recording Error: ", err);
-      recordingRef.current = null;
+      console.log("stopAndUnloadAsync error: ", err);
+      // Even if this throws (e.g. "already unloaded"), continue — we still
+      // want to attempt cleanup and grab whatever URI we can.
     }
+
+    try {
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+    } catch (err) {
+      console.log("setAudioModeAsync (post-stop) error: ", err);
+    }
+
+    try {
+      uri = recording.getURI();
+    } catch (err) {
+      console.log("getURI error: ", err);
+    }
+
+    // 🚀 THE FIX: safety delay BEFORE we tell the rest of the app the
+    // recording is ready. This gives Android time to fully release the
+    // underlying file handle, so AudioPlaybackPill's Sound.createAsync
+    // (which fires almost immediately once onRecordingComplete updates
+    // state) doesn't collide with it.
+    setTimeout(() => {
+      // Only null out the ref if it's still pointing at THIS recording —
+      // protects against a new recording having started in the meantime.
+      if (recordingRef.current === recording) {
+        recordingRef.current = null;
+      }
+      setIsReleasing(false);
+
+      if (uri) {
+        try {
+          onRecordingComplete(uri);
+        } catch (err) {
+          console.log("onRecordingComplete error: ", err);
+        }
+      }
+    }, STOP_RELEASE_DELAY_MS);
   }, [onRecordingComplete]);
 
-  return { isRecording, elapsed, startRecording, stopRecording };
+  return { isRecording, isReleasing, elapsed, startRecording, stopRecording };
 }
 
 export function MicButton({ onRecordingComplete }) {
-  const { isRecording, elapsed, startRecording, stopRecording } = useAudioRecorder({ onRecordingComplete });
+  const { isRecording, isReleasing, elapsed, startRecording, stopRecording } = useAudioRecorder({ onRecordingComplete });
   const pulseScale = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0)).current;
   const pulseLoop = useRef(null);
@@ -111,17 +171,45 @@ export function MicButton({ onRecordingComplete }) {
   }, [isRecording]);
 
   return (
-    <TouchableOpacity style={micStyles.wrapper} onPress={isRecording ? stopRecording : startRecording} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={micStyles.wrapper}
+      onPress={isRecording ? stopRecording : startRecording}
+      activeOpacity={0.8}
+      disabled={isReleasing}
+    >
       <Animated.View style={[micStyles.pulseRing, { transform: [{ scale: pulseScale }], opacity: pulseOpacity }]} />
-      <View style={[micStyles.btn, isRecording && micStyles.btnRecording]}>
-        <Feather
-          name={isRecording ? 'square' : 'mic'}
-          size={isRecording ? 14 : 16}
-          color={isRecording ? L.accent : L.text}
-        />
+      <View style={[micStyles.btn, isRecording && micStyles.btnRecording, isReleasing && micStyles.btnReleasing]}>
+        {isReleasing ? (
+          <ActivityIndicator size="small" color={L.accent} />
+        ) : (
+          <Feather
+            name={isRecording ? 'square' : 'mic'}
+            size={isRecording ? 14 : 16}
+            color={isRecording ? L.accent : L.text}
+          />
+        )}
       </View>
     </TouchableOpacity>
   );
+}
+
+// 🚀 Polls the filesystem until the file at `path` exists AND has a
+// non-zero size, or until we run out of retries. This is the guard that
+// stops AudioPlaybackPill from calling Sound.createAsync on a file the
+// recorder hasn't fully released yet.
+async function waitUntilFileReady(path, retries = FILE_READY_MAX_RETRIES, delayMs = FILE_READY_RETRY_DELAY_MS) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const info = await FileSystem.getInfoAsync(path);
+      if (info.exists && (info.size === undefined || info.size > 0)) {
+        return true;
+      }
+    } catch (err) {
+      console.log("waitUntilFileReady check error: ", err);
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
 }
 
 function useAudioPlayer(uri) {
@@ -134,19 +222,52 @@ function useAudioPlayer(uri) {
   useEffect(() => {
     if (!uri) return;
     let mounted = true;
+    setIsLoaded(false);
+
     (async () => {
-      soundRef.current?.unloadAsync();
-      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false }, (status) => {
-        if (!mounted || !status.isLoaded) return;
-        setPosition(status.positionMillis || 0);
-        setDuration(status.durationMillis || 0);
-        setIsPlaying(status.isPlaying);
-        if (status.didJustFinish) { setIsPlaying(false); sound.setPositionAsync(0); }
-      });
-      soundRef.current = sound;
-      if (mounted) setIsLoaded(true);
+      // Unload any previous sound first.
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+      }
+
+      // 🚀 THE FIX: don't touch Sound.createAsync until the file is
+      // confirmed accessible on disk. If it's a fresh recording, this
+      // covers us even if onRecordingComplete fired slightly early.
+      const ready = await waitUntilFileReady(uri);
+      if (!mounted) return;
+
+      if (!ready) {
+        console.log("Audio file not accessible yet, skipping load:", uri);
+        return;
+      }
+
+      try {
+        const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false }, (status) => {
+          if (!mounted || !status.isLoaded) return;
+          setPosition(status.positionMillis || 0);
+          setDuration(status.durationMillis || 0);
+          setIsPlaying(status.isPlaying);
+          if (status.didJustFinish) { setIsPlaying(false); sound.setPositionAsync(0); }
+        });
+
+        if (!mounted) {
+          sound.unloadAsync().catch(() => {});
+          return;
+        }
+
+        soundRef.current = sound;
+        setIsLoaded(true);
+      } catch (err) {
+        console.log("Sound.createAsync error: ", err);
+      }
     })();
-    return () => { mounted = false; soundRef.current?.unloadAsync().catch(() => {}); };
+
+    return () => {
+      mounted = false;
+      soundRef.current?.unloadAsync().catch(() => {});
+      soundRef.current = null;
+    };
   }, [uri]);
 
   const togglePlayback = useCallback(async () => {
@@ -187,7 +308,11 @@ export function AudioPlaybackPill({ uri, onDelete }) {
   return (
     <Animated.View style={[pillStyles.pill, { transform: [{ translateY: slideY }], opacity }]}>
       <TouchableOpacity style={[pillStyles.playBtn, isPlaying && pillStyles.playBtnActive]} onPress={togglePlayback} disabled={!isLoaded}>
-        <Feather name={isPlaying ? 'pause' : 'play'} size={14} color={L.accent} />
+        {isLoaded ? (
+          <Feather name={isPlaying ? 'pause' : 'play'} size={14} color={L.accent} />
+        ) : (
+          <ActivityIndicator size="small" color={L.accent} />
+        )}
       </TouchableOpacity>
       <View style={{ flex: 1, gap: 5 }}>
         <View style={pillStyles.timeRow}>
@@ -215,6 +340,7 @@ const micStyles = StyleSheet.create({
   pulseRing: { position: 'absolute', width: 36, height: 36, borderRadius: 18, backgroundColor: L.accent, top: '50%', alignSelf: 'center', marginTop: -18 },
   btn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#EAE6E1', alignItems: 'center', justifyContent: 'center' },
   btnRecording: { backgroundColor: L.accentSoft, borderColor: L.accent },
+  btnReleasing: { backgroundColor: L.accentSoft, opacity: 0.7 },
 });
 
 const pillStyles = StyleSheet.create({
@@ -226,4 +352,4 @@ const pillStyles = StyleSheet.create({
   scrubberTrack: { height: 4, backgroundColor: L.border, borderRadius: 2, position: 'relative' }, scrubberFill: { height: 4, backgroundColor: L.accent, borderRadius: 2, position: 'absolute', left: 0, top: 0 }, scrubberThumb: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, backgroundColor: L.accent, marginLeft: -6, shadowColor: L.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   deleteBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: L.card, alignItems: 'center', justifyContent: 'center' },
 });
-  
+      
