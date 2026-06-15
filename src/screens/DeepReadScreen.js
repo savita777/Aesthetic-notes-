@@ -37,7 +37,6 @@ const L = {
   shadow:      '#2D2A2E',
 };
 
-// 🚀 NAYA: Asli PDF Engine render ho raha hai yahan
 function PdfPanel({ pdfUri, height }) {
   return (
     <View style={[pdfStyles.container, { height }]}>
@@ -118,7 +117,8 @@ function NotesPanel({ height, note }) {
         <View style={{ flex: 1 }} />
         <TouchableOpacity style={notesStyles.aiChip}>
           <Feather name="zap" size={12} color={L.accent} />
-          <Text style={styles.aiChipText}>AI</Text>
+          {/* 🚀 BUG FIX: styles.aiChipText tha, usko notesStyles kar diya */}
+          <Text style={notesStyles.aiChipText}>AI</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -215,7 +215,6 @@ export default function DeepReadScreen({ pdfUri, onBack }) {
       <StatusBar barStyle="dark-content" backgroundColor={L.bg} />
       
       <View style={screen.navBar}>
-        {/* 🚀 NAYA: Back button connected to App.js with Feather icon */}
         <TouchableOpacity onPress={onBack} style={screen.navBtn}>
           <Feather name="chevron-left" size={20} color={L.text} />
         </TouchableOpacity>
@@ -245,4 +244,3 @@ const screen = StyleSheet.create({
   modeBadge: { backgroundColor: L.accentSoft, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   modeBadgeText: { fontSize: 9, fontWeight: '800', color: L.accent, letterSpacing: 1.5 },
 });
-                             
