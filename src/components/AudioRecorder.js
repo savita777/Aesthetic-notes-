@@ -29,26 +29,59 @@ function useAudioRecorder({ onRecordingComplete }) {
 
   const startRecording = useCallback(async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') return Alert.alert('Microphone access needed');
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      // 🚀 THE MAGIC FIX: Pehle check karo permission hai ya nahi. 
+      // Agar hai, toh system popup aane hi mat do (PrivacyGate trigger nahi hoga!)
+      let permission = await Audio.getPermissionsAsync();
+      
+      if (permission.status !== 'granted') {
+        permission = await Audio.requestPermissionsAsync();
+      }
+
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission Denied', 'Microphone access is needed for Audio Notes.');
+        return;
+      }
+      
+      await Audio.setAudioModeAsync({ 
+        allowsRecordingIOS: true, 
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false, 
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false
+      });
+
       const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      
       recordingRef.current = recording;
       setIsRecording(true);
       setElapsed(0);
       timerRef.current = setInterval(() => setElapsed((prev) => prev + 1), 1000);
-    } catch (err) { Alert.alert('Recording failed'); }
+      
+    } catch (err) { 
+      console.log("Mic Hardware Locked/Error: ", err);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      setIsRecording(false);
+      Alert.alert(
+        'Mic is Busy 🎙️', 
+        'Aapke phone ka microphone abhi hardware level par lock hai. Kripya phone ko ek baar restart karein.'
+      ); 
+    }
   }, []);
 
   const stopRecording = useCallback(async () => {
-    clearInterval(timerRef.current);
-    setIsRecording(false);
-    if (!recordingRef.current) return;
-    await recordingRef.current.stopAndUnloadAsync();
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
-    const uri = recordingRef.current.getURI();
-    recordingRef.current = null;
-    if (uri) onRecordingComplete(uri);
+    try {
+      clearInterval(timerRef.current);
+      setIsRecording(false);
+      if (!recordingRef.current) return;
+      await recordingRef.current.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+      if (uri) onRecordingComplete(uri);
+    } catch (err) {
+      console.log("Stop Recording Error: ", err);
+      recordingRef.current = null;
+    }
   }, [onRecordingComplete]);
 
   return { isRecording, elapsed, startRecording, stopRecording };
@@ -193,4 +226,4 @@ const pillStyles = StyleSheet.create({
   scrubberTrack: { height: 4, backgroundColor: L.border, borderRadius: 2, position: 'relative' }, scrubberFill: { height: 4, backgroundColor: L.accent, borderRadius: 2, position: 'absolute', left: 0, top: 0 }, scrubberThumb: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, backgroundColor: L.accent, marginLeft: -6, shadowColor: L.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   deleteBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: L.card, alignItems: 'center', justifyContent: 'center' },
 });
-                
+  
