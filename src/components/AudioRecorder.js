@@ -9,15 +9,7 @@ const L = {
   accentSoft: '#F2E8EA', text: '#2D2A2E', muted: '#9B9099'
 };
 
-// 🚀 RACE-CONDITION FIX: how long to wait after stopAndUnloadAsync() before
-// we even acknowledge the recording is "done". On Android, the OS releases
-// the file handle slightly AFTER the JS promise resolves — if Sound.createAsync
-// fires inside that window, it can hard-crash the app (not just throw a JS error).
 const STOP_RELEASE_DELAY_MS = 700;
-
-// 🚀 Used by AudioPlaybackPill: how many times (and how often) to poll
-// the filesystem to confirm the audio file is fully written + accessible
-// before handing the uri to Audio.Sound.createAsync.
 const FILE_READY_MAX_RETRIES = 6;
 const FILE_READY_RETRY_DELAY_MS = 150;
 
@@ -29,10 +21,6 @@ function formatDuration(seconds) {
 
 function useAudioRecorder({ onRecordingComplete }) {
   const [isRecording, setIsRecording] = useState(false);
-  // 🚀 NAYA: "Releasing" state — recording has stopped but we're inside the
-  // safety window waiting for Android to free the file handle. Mic button
-  // stays disabled during this tiny window so the user can't immediately
-  // start a new recording on top of an unreleased session.
   const [isReleasing, setIsReleasing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const recordingRef = useRef(null);
@@ -47,8 +35,6 @@ function useAudioRecorder({ onRecordingComplete }) {
 
   const startRecording = useCallback(async () => {
     try {
-      // 🚀 THE MAGIC FIX: Pehle check karo permission hai ya nahi. 
-      // Agar hai, toh system popup aane hi mat do (PrivacyGate trigger nahi hoga!)
       let permission = await Audio.getPermissionsAsync();
       
       if (permission.status !== 'granted') {
@@ -60,10 +46,12 @@ function useAudioRecorder({ onRecordingComplete }) {
         return;
       }
       
+      // 🚀 FIX: staysActiveInBackground ko true kiya taaki permission popup
+      // aane par app kill na ho jaye.
       await Audio.setAudioModeAsync({ 
         allowsRecordingIOS: true, 
         playsInSilentModeIOS: true,
-        staysActiveInBackground: false, 
+        staysActiveInBackground: true, 
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false
       });
@@ -77,11 +65,10 @@ function useAudioRecorder({ onRecordingComplete }) {
       
     } catch (err) { 
       console.log("Mic Hardware Locked/Error: ", err);
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
       setIsRecording(false);
       Alert.alert(
         'Mic is Busy 🎙️', 
-        'Aapke phone ka microphone abhi hardware level par lock hai. Kripya phone ko ek baar restart karein.'
+        'Aapke phone ka microphone abhi lock hai. Kripya phone ko ek baar restart karein.'
       ); 
     }
   }, []);
@@ -90,30 +77,21 @@ function useAudioRecorder({ onRecordingComplete }) {
     clearInterval(timerRef.current);
     setIsRecording(false);
 
-    // Grab a stable local reference — recordingRef.current could theoretically
-    // be overwritten by a fast new startRecording() call during our safety
-    // delay below, and we don't want to nullify someone else's recording.
     const recording = recordingRef.current;
     if (!recording) return;
 
     setIsReleasing(true);
-
     let uri = null;
 
     try {
-      // Step 1: ask the OS to stop + unload the recorder.
+      // Sirf record roko aur OS ko free chhod do
       await recording.stopAndUnloadAsync();
     } catch (err) {
       console.log("stopAndUnloadAsync error: ", err);
-      // Even if this throws (e.g. "already unloaded"), continue — we still
-      // want to attempt cleanup and grab whatever URI we can.
     }
 
-    try {
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
-    } catch (err) {
-      console.log("setAudioModeAsync (post-stop) error: ", err);
-    }
+    // 🛑 FATAL CRASH FIX: Yahan se "Audio.setAudioModeAsync" HATA DIYA GAYA HAI!
+    // Android par is line ki wajah se seedha Splash Screen par phek raha tha.
 
     try {
       uri = recording.getURI();
@@ -121,14 +99,7 @@ function useAudioRecorder({ onRecordingComplete }) {
       console.log("getURI error: ", err);
     }
 
-    // 🚀 THE FIX: safety delay BEFORE we tell the rest of the app the
-    // recording is ready. This gives Android time to fully release the
-    // underlying file handle, so AudioPlaybackPill's Sound.createAsync
-    // (which fires almost immediately once onRecordingComplete updates
-    // state) doesn't collide with it.
     setTimeout(() => {
-      // Only null out the ref if it's still pointing at THIS recording —
-      // protects against a new recording having started in the meantime.
       if (recordingRef.current === recording) {
         recordingRef.current = null;
       }
@@ -193,10 +164,6 @@ export function MicButton({ onRecordingComplete }) {
   );
 }
 
-// 🚀 Polls the filesystem until the file at `path` exists AND has a
-// non-zero size, or until we run out of retries. This is the guard that
-// stops AudioPlaybackPill from calling Sound.createAsync on a file the
-// recorder hasn't fully released yet.
 async function waitUntilFileReady(path, retries = FILE_READY_MAX_RETRIES, delayMs = FILE_READY_RETRY_DELAY_MS) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -225,15 +192,11 @@ function useAudioPlayer(uri) {
     setIsLoaded(false);
 
     (async () => {
-      // Unload any previous sound first.
       if (soundRef.current) {
         await soundRef.current.unloadAsync().catch(() => {});
         soundRef.current = null;
       }
 
-      // 🚀 THE FIX: don't touch Sound.createAsync until the file is
-      // confirmed accessible on disk. If it's a fresh recording, this
-      // covers us even if onRecordingComplete fired slightly early.
       const ready = await waitUntilFileReady(uri);
       if (!mounted) return;
 
@@ -352,4 +315,4 @@ const pillStyles = StyleSheet.create({
   scrubberTrack: { height: 4, backgroundColor: L.border, borderRadius: 2, position: 'relative' }, scrubberFill: { height: 4, backgroundColor: L.accent, borderRadius: 2, position: 'absolute', left: 0, top: 0 }, scrubberThumb: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, backgroundColor: L.accent, marginLeft: -6, shadowColor: L.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   deleteBtn: { width: 24, height: 24, borderRadius: 12, backgroundColor: L.card, alignItems: 'center', justifyContent: 'center' },
 });
-      
+        
