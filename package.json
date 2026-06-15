@@ -24,7 +24,7 @@
     "react-native-pell-rich-editor": "1.9.0",
     "react-native-qrcode-svg": "^6.3.0",
     "expo-document-picker": "~14.0.1",
-    "react-native-pdf": "^6.7.4",
+    "react-native-pdf": "^6.7.5",
     "react-native-blob-util": "^0.19.9",
     "react-native-audio-recorder-player": "^3.5.3"
   }
