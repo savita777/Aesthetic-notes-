@@ -18,7 +18,6 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// 🚀 THE FIX: Sirf Microphone Permission maang rahe hain, Storage nahi!
 const requestAndroidPermissions = async () => {
   if (Platform.OS !== 'android') return true;
   try {
@@ -56,11 +55,19 @@ function useAudioRecorder({ onRecordingComplete }) {
     if (!hasPermissions) return;
 
     try {
+      // 🚀 THE FIX: Android ke native MediaRecorder ko 'file://' se problem hoti hai.
+      // Isliye hum FileSystem.cacheDirectory me se usko replace kar rahe hain.
+      let dir = FileSystem.cacheDirectory;
+      if (Platform.OS === 'android') {
+        dir = dir.replace('file://', ''); 
+      }
+
       const path = Platform.OS === 'android'
-        ? `${FileSystem.cacheDirectory}audio_note_${Date.now()}.mp4`
+        ? `${dir}audio_note_${Date.now()}.mp4`
         : `audio_note_${Date.now()}.m4a`;
 
       currentPathRef.current = path;
+      
       await audioRecorderPlayer.startRecorder(path);
       
       audioRecorderPlayer.addRecordBackListener((e) => {
@@ -69,7 +76,9 @@ function useAudioRecorder({ onRecordingComplete }) {
       
       setIsRecording(true);
     } catch (err) {
+      // 🚨 AGAR KUCH GALAT HUA TOH AB SCREEN PAR DIKHEGA!
       console.error("Start Error: ", err);
+      Alert.alert("Engine Error 🛑", String(err.message || err));
       setIsRecording(false);
     }
   }, []);
@@ -84,6 +93,7 @@ function useAudioRecorder({ onRecordingComplete }) {
       if (finalUri) onRecordingComplete(finalUri);
     } catch (err) {
       console.error("Stop Error: ", err);
+      Alert.alert("Stop Error 🛑", String(err.message || err));
       setIsRecording(false);
     }
   }, [onRecordingComplete]);
@@ -162,6 +172,7 @@ function useAudioPlayer(uri) {
         });
       } catch (err) {
         console.warn('Play error:', err);
+        Alert.alert("Play Error", String(err.message || err));
         setIsPlaying(false);
       }
     }
