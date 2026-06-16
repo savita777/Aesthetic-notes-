@@ -1,26 +1,11 @@
 import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Keyboard,
-  Animated,
-  Platform,
-  Dimensions,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, TextInput, Keyboard, Animated, Platform, Dimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system'; 
 
-import { Colors } from '../theme/colors';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
-
-// 🎨 NAYA: ThemeContext import kiya hai
 import { useTheme } from '../context/ThemeContext'; 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -40,13 +25,12 @@ function getGlassPalette(subject) {
 }
 
 function CollectionCard({ subject, count, isActive, onPress }) {
-  const { theme } = useTheme(); // 🎨 Theme hook
+  const { theme } = useTheme();
   const palette = getGlassPalette(subject);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 40 }).start();
   const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
-
   const labelText = subject.replace(/^\S+\s/, '');
 
   return (
@@ -56,11 +40,7 @@ function CollectionCard({ subject, count, isActive, onPress }) {
         onPressIn={handlePressIn} 
         onPressOut={handlePressOut} 
         onPress={onPress} 
-        style={[
-          styles.glassCard, 
-          // 🎨 Theme border and background logic
-          { backgroundColor: theme.id === 'dark' ? theme.card : palette.tint, borderColor: isActive ? theme.accent : theme.border }
-        ]}
+        style={[styles.glassCard, { backgroundColor: theme.id === 'dark' ? theme.card : palette.tint, borderColor: isActive ? theme.accent : theme.border }]}
       >
         <View style={styles.glassInner}>
           <Text style={styles.glassEmoji}>{palette.emoji}</Text>
@@ -76,13 +56,9 @@ function CollectionCard({ subject, count, isActive, onPress }) {
 }
 
 function NoteCard({ item, onPress }) {
-  const { theme } = useTheme(); // 🎨 Theme hook
+  const { theme } = useTheme();
   return (
-    <TouchableOpacity 
-      style={[styles.notebookCard, { backgroundColor: item.color || theme.card, borderColor: theme.border, borderWidth: 1 }]} 
-      onPress={() => onPress(item)} 
-      activeOpacity={0.8}
-    >
+    <TouchableOpacity style={[styles.notebookCard, { backgroundColor: item.color || theme.card, borderColor: theme.border, borderWidth: 1 }]} onPress={() => onPress(item)} activeOpacity={0.8}>
       <View style={[styles.binderStrip, { borderColor: theme.border }]}>
         <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
         <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
@@ -105,9 +81,8 @@ function NoteCard({ item, onPress }) {
 }
 
 function FocusReadBanner({ onPress }) {
-  const { theme } = useTheme(); // 🎨 Theme hook
+  const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  
   const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 40 }).start();
   const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
@@ -132,8 +107,7 @@ function FocusReadBanner({ onPress }) {
 }
 
 export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout, onOpenDeepRead }) {
-  const { theme } = useTheme(); // 🎨 MAIN SCREEN THEME HOOK
-  
+  const { theme } = useTheme();
   const [activeSubject, setActiveSubject] = useState('All Notes');
   const [searchQuery, setSearchQuery] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
@@ -158,23 +132,16 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
 
   const handleOpenFocusRead = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
-        copyToCacheDirectory: true,
-      });
+      const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         let safeUri = result.assets[0].uri;
         if(Platform.OS === 'android' && safeUri.startsWith('content://')){
           const fileInfo = await FileSystem.getInfoAsync(safeUri);
-          if(fileInfo.exists) {
-            safeUri = fileInfo.uri;
-          }
+          if(fileInfo.exists) safeUri = fileInfo.uri;
         }
         onOpenDeepRead(safeUri);
       }
-    } catch (err) {
-      console.log("Error selecting PDF:", err);
-    }
+    } catch (err) { console.log(err); }
   };
 
   const recentHeader = () => {
@@ -208,20 +175,9 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
       </View>
       <View style={[styles.searchContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <Feather name="search" size={18} color={theme.muted} style={styles.searchIcon} />
-        <TextInput 
-          style={[styles.searchInput, { color: theme.text }]} 
-          placeholder="Search notes, topics..." 
-          placeholderTextColor={theme.muted} 
-          value={searchQuery} 
-          onChangeText={setSearchQuery} 
-          returnKeyType="search" 
-          onSubmitEditing={() => Keyboard.dismiss()} 
-          autoCorrect={false} 
-        />
+        <TextInput style={[styles.searchInput, { color: theme.text }]} placeholder="Search notes, topics..." placeholderTextColor={theme.muted} value={searchQuery} onChangeText={setSearchQuery} returnKeyType="search" onSubmitEditing={() => Keyboard.dismiss()} autoCorrect={false} />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={[styles.clearSearchBtn, { backgroundColor: theme.surface }]}>
-            <Text style={[styles.clearSearchText, { color: theme.text }]}>✕</Text>
-          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={[styles.clearSearchBtn, { backgroundColor: theme.surface }]}><Text style={[styles.clearSearchText, { color: theme.text }]}>✕</Text></TouchableOpacity>
         )}
       </View>
     </View>
@@ -229,29 +185,17 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
 
   const renderScrollableHeader = () => (
     <View style={{ paddingTop: 6 }}>
-      
-      <View style={styles.widgetContainer}>
-        <DailyStreakWidget />
-      </View>
-
+      <View style={styles.widgetContainer}><DailyStreakWidget /></View>
       <FocusReadBanner onPress={handleOpenFocusRead} />
-
       <View style={styles.sectionHeader}>
         <View>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Knowledge Vault</Text>
           <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>{allSubjects.length - 1} collections · {notes.length} notes total</Text>
         </View>
-        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}>
-          <Text style={[styles.seeAllText, { color: theme.accent }]}>See All</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}><Text style={[styles.seeAllText, { color: theme.accent }]}>See All</Text></TouchableOpacity>
       </View>
-
       <View style={styles.collectionsGrid}>
-        <TouchableOpacity 
-          style={[styles.glassCardWide, { backgroundColor: theme.card, borderColor: activeSubject === 'All Notes' ? theme.accent : theme.border }]} 
-          onPress={() => setActiveSubject('All Notes')} 
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={[styles.glassCardWide, { backgroundColor: theme.card, borderColor: activeSubject === 'All Notes' ? theme.accent : theme.border }]} onPress={() => setActiveSubject('All Notes')} activeOpacity={0.8}>
           <View style={styles.glassInnerWide}>
             <Feather name="layers" size={28} color={theme.text} />
             <View>
@@ -261,14 +205,12 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
           </View>
           {activeSubject === 'All Notes' && <View style={[styles.activeDot, { backgroundColor: theme.accent, borderColor: theme.card }]} />}
         </TouchableOpacity>
-
         <View style={styles.collectionsRow}>
           {allSubjects.slice(1).map((subject) => (
             <CollectionCard key={subject} subject={subject} count={countForSubject(subject)} isActive={activeSubject === subject} onPress={() => setActiveSubject(activeSubject === subject ? 'All Notes' : subject)} />
           ))}
         </View>
       </View>
-
       <View style={[styles.divider, { backgroundColor: theme.border }]} />
       {recentHeader()}
     </View>
@@ -289,16 +231,12 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
       ) : (
         <FlatList data={filteredNotes} keyExtractor={(item) => item.id} renderItem={({ item }) => <NoteCard item={item} onPress={onSelectNote} />} numColumns={2} ListHeaderComponent={renderScrollableHeader()} contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
       )}
-      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.accent }]} onPress={onCreateNew}>
-        <Feather name="edit-2" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.accent }]} onPress={onCreateNew}><Feather name="edit-2" size={24} color="#FFFFFF" /></TouchableOpacity>
       <StudygramShareModal visible={showShareModal} onClose={() => setShowShareModal(false)} />
     </View>
   );
 }
 
-// 🎨 NOTE: Purane colors delete nahi kiye gaye hain, wo yahin rahenge as a blueprint.
-// Naye colors directly components mein { inline } inject kar diye gaye hain.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F6F2' },
   staticHeader: { paddingTop: Platform.OS === 'ios' ? 60 : 48, backgroundColor: '#F8F6F2', paddingBottom: 10, zIndex: 10 },
@@ -348,4 +286,11 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '700', color: '#2D2A2E', marginBottom: 6, lineHeight: 22 },
   cardSnippet: { fontSize: 12, color: '#777', flex: 1, lineHeight: 18 },
   footer: { marginTop: 'auto', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 7 },
-  cardDate: { fontSize: 10, color: '#999', fontW
+  cardDate: { fontSize: 10, color: '#999', fontWeight: '600' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingTop: 20, paddingBottom: 60 },
+  emptyIcon: { marginBottom: 14 },
+  emptyText: { fontSize: 17, color: '#2D2A2E', fontWeight: '700', textAlign: 'center', marginBottom: 6 },
+  emptySubText: { fontSize: 14, color: '#8A8788', textAlign: 'center', lineHeight: 20 },
+  fab: { position: 'absolute', right: 22, bottom: 38, backgroundColor: '#2D2A2E', width: 62, height: 62, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 10 },
+});
+          
