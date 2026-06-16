@@ -13,6 +13,9 @@ import DeepReadScreen from './src/screens/DeepReadScreen';
 import { Colors } from './src/theme/colors';
 import PrivacyGate from './src/components/PrivacyGate';
 
+// 🎨 NAYA: ThemeProvider import kiya taaki screens crash na hon
+import { ThemeProvider } from './src/context/ThemeContext';
+
 SplashScreen.preventAutoHideAsync();
 
 const CLAUDE_COLORS = { background: '#F8F9FA', accent: '#4A90E2' };
@@ -186,33 +189,36 @@ export default function App() {
   if (!session) return <AuthScreen />;
 
   return (
-    <PrivacyGate session={session}>
-      <SafeAreaView style={styles.container}>
-        <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
-        
-        {currentScreen === 'home' ? (
-          <HomeScreen 
-            notes={notes}
-            onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
-            onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
-            onLogout={handleLogout}
-            onOpenDeepRead={(uri) => { setDeepReadUri(uri); setCurrentScreen('deepRead'); }} 
-          />
-        ) : currentScreen === 'deepRead' ? (                                                
-          <DeepReadScreen                                                                   
-            pdfUri={deepReadUri}                                                            
-            onBack={() => { setCurrentScreen('home'); setDeepReadUri(null); }}              
-          />                                                                                
-        ) : (
-          <NoteScreen 
-            note={selectedNote}
-            onSave={handleSaveNote}
-            onDelete={handleDeleteNote} 
-            onBack={() => { setCurrentScreen('home'); setSelectedNote(null); }}
-          />
-        )}
-      </SafeAreaView>
-    </PrivacyGate>
+    // 🎨 NAYA: ThemeProvider yahan lagaya hai taaki sabko colors mil jayein
+    <ThemeProvider>
+      <PrivacyGate session={session}>
+        <SafeAreaView style={styles.container}>
+          <StatusBar backgroundColor={Colors.background} barStyle="dark-content" />
+          
+          {currentScreen === 'home' ? (
+            <HomeScreen 
+              notes={notes}
+              onSelectNote={(note) => { setSelectedNote(note); setCurrentScreen('note'); }}
+              onCreateNew={() => { setSelectedNote(null); setCurrentScreen('note'); }}
+              onLogout={handleLogout}
+              onOpenDeepRead={(uri) => { setDeepReadUri(uri); setCurrentScreen('deepRead'); }} 
+            />
+          ) : currentScreen === 'deepRead' ? (                                                
+            <DeepReadScreen                                                                   
+              pdfUri={deepReadUri}                                                            
+              onBack={() => { setCurrentScreen('home'); setDeepReadUri(null); }}              
+            />                                                                                
+          ) : (
+            <NoteScreen 
+              note={selectedNote}
+              onSave={handleSaveNote}
+              onDelete={handleDeleteNote} 
+              onBack={() => { setCurrentScreen('home'); setSelectedNote(null); }}
+            />
+          )}
+        </SafeAreaView>
+      </PrivacyGate>
+    </ThemeProvider>
   );
 }
 
