@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-// 🚀 NAYA: FileSystem import kiya crash fix ke liye
 import * as FileSystem from 'expo-file-system'; 
 
 import { Colors } from '../theme/colors';
 import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
+
+// 🎨 NAYA: ThemeContext import kiya hai
+import { useTheme } from '../context/ThemeContext'; 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 14) / 2;
@@ -38,6 +40,7 @@ function getGlassPalette(subject) {
 }
 
 function CollectionCard({ subject, count, isActive, onPress }) {
+  const { theme } = useTheme(); // 🎨 Theme hook
   const palette = getGlassPalette(subject);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -48,14 +51,24 @@ function CollectionCard({ subject, count, isActive, onPress }) {
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity activeOpacity={0.8} onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress} style={[styles.glassCard, { backgroundColor: palette.tint }, isActive && styles.glassCardActive]}>
+      <TouchableOpacity 
+        activeOpacity={0.8} 
+        onPressIn={handlePressIn} 
+        onPressOut={handlePressOut} 
+        onPress={onPress} 
+        style={[
+          styles.glassCard, 
+          // 🎨 Theme border and background logic
+          { backgroundColor: theme.id === 'dark' ? theme.card : palette.tint, borderColor: isActive ? theme.accent : theme.border }
+        ]}
+      >
         <View style={styles.glassInner}>
           <Text style={styles.glassEmoji}>{palette.emoji}</Text>
           <View style={styles.glassMeta}>
-            <Text style={styles.glassSubjectName} numberOfLines={1}>{labelText}</Text>
-            <Text style={styles.glassNoteCount}>{count} {count === 1 ? 'note' : 'notes'}</Text>
+            <Text style={[styles.glassSubjectName, { color: theme.text }]} numberOfLines={1}>{labelText}</Text>
+            <Text style={[styles.glassNoteCount, { color: theme.muted }]}>{count} {count === 1 ? 'note' : 'notes'}</Text>
           </View>
-          {isActive && <View style={styles.activeDot} />}
+          {isActive && <View style={[styles.activeDot, { backgroundColor: theme.accent, borderColor: theme.card }]} />}
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -63,19 +76,28 @@ function CollectionCard({ subject, count, isActive, onPress }) {
 }
 
 function NoteCard({ item, onPress }) {
+  const { theme } = useTheme(); // 🎨 Theme hook
   return (
-    <TouchableOpacity style={[styles.notebookCard, { backgroundColor: item.color || '#FDF6F5' }]} onPress={() => onPress(item)} activeOpacity={0.8}>
-      <View style={styles.binderStrip}>
-        <View style={styles.binderHole} /><View style={styles.binderHole} /><View style={styles.binderHole} /><View style={styles.binderHole} /><View style={styles.binderHole} />
+    <TouchableOpacity 
+      style={[styles.notebookCard, { backgroundColor: item.color || theme.card, borderColor: theme.border, borderWidth: 1 }]} 
+      onPress={() => onPress(item)} 
+      activeOpacity={0.8}
+    >
+      <View style={[styles.binderStrip, { borderColor: theme.border }]}>
+        <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
+        <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
+        <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
+        <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
+        <View style={[styles.binderHole, { backgroundColor: theme.surface }]} />
       </View>
       <View style={styles.notebookContent}>
-        <View style={styles.notebookLabel}>
-          <Text style={styles.labelSubject}>{item.folder || '📝 Journal'}</Text>
+        <View style={[styles.notebookLabel, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.labelSubject, { color: theme.text }]}>{item.folder || '📝 Journal'}</Text>
         </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>{item.title || 'Untitled Session'}</Text>
-        <Text style={styles.cardSnippet} numberOfLines={3}>{item.content || 'Tap to study...'}</Text>
-        <View style={styles.footer}>
-          <Text style={styles.cardDate}>{item.date?.split(' ')[0]}</Text>
+        <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>{item.title || 'Untitled Session'}</Text>
+        <Text style={[styles.cardSnippet, { color: theme.muted }]} numberOfLines={3}>{item.content || 'Tap to study...'}</Text>
+        <View style={[styles.footer, { borderTopColor: theme.border }]}>
+          <Text style={[styles.cardDate, { color: theme.muted }]}>{item.date?.split(' ')[0]}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -83,24 +105,26 @@ function NoteCard({ item, onPress }) {
 }
 
 function FocusReadBanner({ onPress }) {
+  const { theme } = useTheme(); // 🎨 Theme hook
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  
   const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 40 }).start();
   const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
   return (
-    <Animated.View style={[styles.focusBanner, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[styles.focusBanner, { transform: [{ scale: scaleAnim }], backgroundColor: theme.accentSoft, borderColor: theme.accent + '40' }]}>
       <TouchableOpacity activeOpacity={0.9} onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress} style={styles.focusBannerInner}>
         <View style={styles.focusBannerLeft}>
-          <View style={styles.focusBannerIconWrap}>
-            <Feather name="book-open" size={20} color="#5C4B8A" />
+          <View style={[styles.focusBannerIconWrap, { backgroundColor: theme.surface, borderColor: theme.accent + '30' }]}>
+            <Feather name="book-open" size={20} color={theme.accent} />
           </View>
           <View>
-            <Text style={styles.focusBannerTitle}>Focus Read</Text>
-            <Text style={styles.focusBannerSub}>Deep read mode · PDF + Notes</Text>
+            <Text style={[styles.focusBannerTitle, { color: theme.text }]}>Focus Read</Text>
+            <Text style={[styles.focusBannerSub, { color: theme.accent }]}>Deep read mode · PDF + Notes</Text>
           </View>
         </View>
-        <View style={styles.focusBannerArrow}>
-          <Feather name="arrow-right" size={16} color="#8B7AB5" />
+        <View style={[styles.focusBannerArrow, { backgroundColor: theme.surface }]}>
+          <Feather name="arrow-right" size={16} color={theme.accent} />
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -108,6 +132,8 @@ function FocusReadBanner({ onPress }) {
 }
 
 export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout, onOpenDeepRead }) {
+  const { theme } = useTheme(); // 🎨 MAIN SCREEN THEME HOOK
+  
   const [activeSubject, setActiveSubject] = useState('All Notes');
   const [searchQuery, setSearchQuery] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
@@ -130,7 +156,6 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
     }).length;
   }
 
-  // 🚀 NAYA: CRASH FIX - Local Absolute Path logic added
   const handleOpenFocusRead = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -139,15 +164,12 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         let safeUri = result.assets[0].uri;
-        
-        // Convert content:// to an absolute file:// path for Android PDF Viewer
         if(Platform.OS === 'android' && safeUri.startsWith('content://')){
           const fileInfo = await FileSystem.getInfoAsync(safeUri);
           if(fileInfo.exists) {
             safeUri = fileInfo.uri;
           }
         }
-        
         onOpenDeepRead(safeUri);
       }
     } catch (err) {
@@ -161,34 +183,45 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
     return (
       <View style={styles.sectionHeader}>
         <View>
-          <Text style={styles.sectionTitle}>Recent Notes</Text>
-          <Text style={styles.sectionSubtitle}>{searchQuery ? `${count} results for "${searchQuery}"` : `${count} ${count === 1 ? 'note' : 'notes'} in ${label}`}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Notes</Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>{searchQuery ? `${count} results for "${searchQuery}"` : `${count} ${count === 1 ? 'note' : 'notes'} in ${label}`}</Text>
         </View>
       </View>
     );
   };
 
   const renderStaticHeader = () => (
-    <View style={styles.staticHeader}>
+    <View style={[styles.staticHeader, { backgroundColor: theme.surface }]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greetingText}>Your Private Library</Text>
-          <Text style={styles.headerTitle}>My Study Space</Text>
+          <Text style={[styles.greetingText, { color: theme.muted }]}>Your Private Library</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>My Study Space</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.shareIconBtn} onPress={() => setShowShareModal(true)}>
-            <Feather name="camera" size={18} color="#2D2A2E" />
+          <TouchableOpacity style={[styles.shareIconBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => setShowShareModal(true)}>
+            <Feather name="camera" size={18} color={theme.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+          <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={onLogout}>
             <Feather name="log-out" size={18} color="#D9534F" />
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={18} color="#A09E9F" style={styles.searchIcon} />
-        <TextInput style={styles.searchInput} placeholder="Search notes, topics..." placeholderTextColor="#A09E9F" value={searchQuery} onChangeText={setSearchQuery} returnKeyType="search" onSubmitEditing={() => Keyboard.dismiss()} autoCorrect={false} />
+      <View style={[styles.searchContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Feather name="search" size={18} color={theme.muted} style={styles.searchIcon} />
+        <TextInput 
+          style={[styles.searchInput, { color: theme.text }]} 
+          placeholder="Search notes, topics..." 
+          placeholderTextColor={theme.muted} 
+          value={searchQuery} 
+          onChangeText={setSearchQuery} 
+          returnKeyType="search" 
+          onSubmitEditing={() => Keyboard.dismiss()} 
+          autoCorrect={false} 
+        />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={styles.clearSearchBtn}><Text style={styles.clearSearchText}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={[styles.clearSearchBtn, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.clearSearchText, { color: theme.text }]}>✕</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -205,22 +238,28 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
 
       <View style={styles.sectionHeader}>
         <View>
-          <Text style={styles.sectionTitle}>Knowledge Vault</Text>
-          <Text style={styles.sectionSubtitle}>{allSubjects.length - 1} collections · {notes.length} notes total</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Knowledge Vault</Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>{allSubjects.length - 1} collections · {notes.length} notes total</Text>
         </View>
-        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}><Text style={styles.seeAllText}>See All</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setActiveSubject('All Notes')}>
+          <Text style={[styles.seeAllText, { color: theme.accent }]}>See All</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.collectionsGrid}>
-        <TouchableOpacity style={[styles.glassCardWide, activeSubject === 'All Notes' && styles.glassCardActive]} onPress={() => setActiveSubject('All Notes')} activeOpacity={0.8}>
+        <TouchableOpacity 
+          style={[styles.glassCardWide, { backgroundColor: theme.card, borderColor: activeSubject === 'All Notes' ? theme.accent : theme.border }]} 
+          onPress={() => setActiveSubject('All Notes')} 
+          activeOpacity={0.8}
+        >
           <View style={styles.glassInnerWide}>
-            <Feather name="layers" size={28} color="#2D2A2E" />
+            <Feather name="layers" size={28} color={theme.text} />
             <View>
-              <Text style={styles.glassSubjectName}>All Notes</Text>
-              <Text style={styles.glassNoteCount}>{notes.length} notes across all vaults</Text>
+              <Text style={[styles.glassSubjectName, { color: theme.text }]}>All Notes</Text>
+              <Text style={[styles.glassNoteCount, { color: theme.muted }]}>{notes.length} notes across all vaults</Text>
             </View>
           </View>
-          {activeSubject === 'All Notes' && <View style={styles.activeDot} />}
+          {activeSubject === 'All Notes' && <View style={[styles.activeDot, { backgroundColor: theme.accent, borderColor: theme.card }]} />}
         </TouchableOpacity>
 
         <View style={styles.collectionsRow}>
@@ -230,27 +269,27 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
         </View>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border }]} />
       {recentHeader()}
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.surface }]}>
       {renderStaticHeader()}
       {filteredNotes.length === 0 ? (
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 120 }}>
           {renderScrollableHeader()}
           <View style={styles.emptyContainer}>
-            <Feather name="inbox" size={56} color="#C8BDBE" style={styles.emptyIcon} />
-            <Text style={styles.emptyText}>{searchQuery ? 'No results found.' : `No notes in ${activeSubject.replace(/^\S+\s/, '')} yet.`}</Text>
-            <Text style={styles.emptySubText}>{searchQuery ? 'Try a different keyword!' : 'Start building your knowledge vault!'}</Text>
+            <Feather name="inbox" size={56} color={theme.muted} style={styles.emptyIcon} />
+            <Text style={[styles.emptyText, { color: theme.text }]}>{searchQuery ? 'No results found.' : `No notes in ${activeSubject.replace(/^\S+\s/, '')} yet.`}</Text>
+            <Text style={[styles.emptySubText, { color: theme.muted }]}>{searchQuery ? 'Try a different keyword!' : 'Start building your knowledge vault!'}</Text>
           </View>
         </ScrollView>
       ) : (
         <FlatList data={filteredNotes} keyExtractor={(item) => item.id} renderItem={({ item }) => <NoteCard item={item} onPress={onSelectNote} />} numColumns={2} ListHeaderComponent={renderScrollableHeader()} contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" />
       )}
-      <TouchableOpacity style={styles.fab} onPress={onCreateNew}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.accent }]} onPress={onCreateNew}>
         <Feather name="edit-2" size={24} color="#FFFFFF" />
       </TouchableOpacity>
       <StudygramShareModal visible={showShareModal} onClose={() => setShowShareModal(false)} />
@@ -258,6 +297,8 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
   );
 }
 
+// 🎨 NOTE: Purane colors delete nahi kiye gaye hain, wo yahin rahenge as a blueprint.
+// Naye colors directly components mein { inline } inject kar diye gaye hain.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F6F2' },
   staticHeader: { paddingTop: Platform.OS === 'ios' ? 60 : 48, backgroundColor: '#F8F6F2', paddingBottom: 10, zIndex: 10 },
@@ -307,11 +348,4 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '700', color: '#2D2A2E', marginBottom: 6, lineHeight: 22 },
   cardSnippet: { fontSize: 12, color: '#777', flex: 1, lineHeight: 18 },
   footer: { marginTop: 'auto', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)', paddingTop: 7 },
-  cardDate: { fontSize: 10, color: '#999', fontWeight: '600' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, paddingTop: 20, paddingBottom: 60 },
-  emptyIcon: { marginBottom: 14 },
-  emptyText: { fontSize: 17, color: '#2D2A2E', fontWeight: '700', textAlign: 'center', marginBottom: 6 },
-  emptySubText: { fontSize: 14, color: '#8A8788', textAlign: 'center', lineHeight: 20 },
-  fab: { position: 'absolute', right: 22, bottom: 38, backgroundColor: '#2D2A2E', width: 62, height: 62, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 10 },
-});
-  
+  cardDate: { fontSize: 10, color: '#999', fontW
