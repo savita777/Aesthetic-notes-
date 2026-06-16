@@ -15,6 +15,9 @@ import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
 import AiSparkModal from '../components/AiSparkModal';
 
+// 🚀 NAYA: ThemeContext Import
+import { useTheme } from '../context/ThemeContext';
+
 // 🚀 NAYA: Audio Modules Import (Notability style)
 import { MicButton, AudioPlaybackPill } from '../components/AudioRecorder';
 
@@ -24,6 +27,8 @@ const { width, height } = Dimensions.get('window');
 
 // 🚀 NAYA: onDelete prop add kiya hai taaki App.js delete ko control kar sake
 export default function NoteScreen({ note, onSave, onDelete, onBack }) {
+  const { theme } = useTheme(); // 🎨 Theme hook added
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [noteColor, setNoteColor] = useState('#FDF6F5'); 
@@ -141,7 +146,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   };
 
   const applyHighlight = () => {
-    richEditorRef.current?.sendAction('hiliteColor', 'result', '#FDFD96');
+    richEditorRef.current?.sendAction('hiliteColor', 'result', theme.accentSoft);
   };
 
   const generateAestheticPDF = async () => {
@@ -328,25 +333,25 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container} 
+      style={[styles.container, { backgroundColor: theme.surface }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
     >
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Feather name="chevron-left" size={20} color="#8A8788" />
-          <Text style={styles.backButton}>Back</Text>
+          <Feather name="chevron-left" size={20} color={theme.muted} />
+          <Text style={[styles.backButton, { color: theme.muted }]}>Back</Text>
         </TouchableOpacity>
         
         {/* 🚀 NAYA: DELETE & SAVE BUTTON CONTAINER REFINED */}
         <View style={styles.headerActions}>
           {note && ( 
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+            <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={handleDelete}>
               <Feather name="trash-2" size={14} color="#D9534F" />
               <Text style={styles.deleteBtnText}>Delete</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
-            style={styles.saveBtn} 
+            style={[styles.saveBtn, { backgroundColor: theme.accent }]} 
             onPress={async () => {
               await AsyncStorage.removeItem('@lumina_draft'); 
               // 🚀 NAYA: Passed audioUri to onSave function
@@ -358,52 +363,54 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       </View>
 
       <TextInput 
-        style={styles.folderInput} 
+        style={[styles.folderInput, { color: theme.muted }]} 
         placeholder="Subject (e.g., Physics, UPSC) 🏷️" 
+        placeholderTextColor={theme.muted}
         value={folder} 
         onChangeText={setFolder} 
       />
 
       <TextInput 
-        style={styles.titleInput} 
+        style={[styles.titleInput, { color: theme.text }]} 
         placeholder="Topic Title..." 
+        placeholderTextColor={theme.muted}
         value={title} 
         onChangeText={setTitle} 
         multiline
       />
       
-      <View style={styles.toolboxBar}>
+      <View style={[styles.toolboxBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
-          <TouchableOpacity onPress={() => setShowAiModal(true)} style={styles.aiBtn}>
+          <TouchableOpacity onPress={() => setShowAiModal(true)} style={[styles.aiBtn, { backgroundColor: theme.accent }]}>
             <Feather name="zap" size={14} color="#FFFFFF" />
             <Text style={styles.aiBtnText}>AI Spark</Text>
           </TouchableOpacity>
-          <View style={styles.verticalDivider} />
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
           {/* 🚀 NAYA: Mic Button UI Injection */}
           <MicButton onRecordingComplete={(uri) => setAudioUri(uri)} />
-          <View style={styles.verticalDivider} />
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
 
-          <TouchableOpacity onPress={applyHighlight} style={styles.highlightBtn}>
-            <Feather name="edit-3" size={14} color="#2D2A2E" />
-            <Text style={styles.highlightBtnText}>Mark</Text>
+          <TouchableOpacity onPress={applyHighlight} style={[styles.highlightBtn, { backgroundColor: theme.accentSoft }]}>
+            <Feather name="edit-3" size={14} color={theme.text} />
+            <Text style={[styles.highlightBtnText, { color: theme.text }]}>Mark</Text>
           </TouchableOpacity>
-          <View style={styles.verticalDivider} />
-          <Text style={styles.toolLabel}>Stickers:</Text>
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
+          <Text style={[styles.toolLabel, { color: theme.muted }]}>Stickers:</Text>
           {stickersList.map((emoji, index) => (
              <TouchableOpacity key={'stk'+index} onPress={() => addPlacedItem('emoji', emoji)} style={styles.stickerBtn}>
                <Text style={{fontSize:20}}>{emoji}</Text>
              </TouchableOpacity>
           ))}
-          <View style={styles.verticalDivider} />
-          <Text style={styles.toolLabel}>Washi:</Text>
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
+          <Text style={[styles.toolLabel, { color: theme.muted }]}>Washi:</Text>
           {washiColors.map((color, index) => (
              <TouchableOpacity key={'wsh'+index} onPress={() => addPlacedItem('washi', color)} style={[styles.washiIcon, {backgroundColor: color}]} />
           ))}
-          <View style={styles.verticalDivider} />
-          <TouchableOpacity onPress={() => setShowDraw(true)} style={styles.drawBtn}>
-            <Feather name="pen-tool" size={14} color="#2D2A2E" />
-            <Text style={styles.drawBtnText}>Draw</Text>
+          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
+          <TouchableOpacity onPress={() => setShowDraw(true)} style={[styles.drawBtn, { backgroundColor: theme.accentSoft }]}>
+            <Feather name="pen-tool" size={14} color={theme.text} />
+            <Text style={[styles.drawBtnText, { color: theme.text }]}>Draw</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -411,13 +418,13 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       <RichToolbar
         editor={richEditorRef}
         actions={[actions.setBold, actions.setItalic, actions.setUnderline, actions.heading1, actions.insertBulletsList, actions.blockquote, actions.undo, actions.redo]}
-        iconTint="#A09E9F"
-        selectedIconTint="#B5838D"
-        style={styles.richBar}
+        iconTint={theme.muted}
+        selectedIconTint={theme.accent}
+        style={[styles.richBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}
         flatContainerStyle={styles.richBarFlat}
       />
 
-      <View style={styles.masterCanvasWrapper}>
+      <View style={[styles.masterCanvasWrapper, { borderColor: theme.border, backgroundColor: theme.surface }]}>
         <ScrollView 
           style={{ flex: 1 }} 
           showsVerticalScrollIndicator={false}
@@ -428,7 +435,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
           <ViewShot ref={noteViewShotRef} options={{ format: 'png', quality: 1, result: 'data-uri' }} style={[styles.noteContainer, { backgroundColor: noteColor }]}>
             <View style={styles.ruledLinesContainer} pointerEvents="none">
                {[...Array(150)].map((_, i) => (
-                 <View key={i} style={styles.ruledLine} />
+                 <View key={i} style={[styles.ruledLine, { borderBottomColor: theme.border + '30' }]} />
                ))}
             </View>
             
@@ -443,13 +450,13 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
               style={styles.richEditor}
               editorStyle={{
                 backgroundColor: 'transparent',
-                color: '#2D2A2E',
-                placeholderColor: '#A09E9F',
+                color: theme.text,
+                placeholderColor: theme.muted,
                 cssText: `
-                  body { font-family: -apple-system, 'Georgia', serif; font-size: 17px; line-height: 35px; margin: 0; padding: 0; }
-                  h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; padding: 0; }
-                  h1 { font-size: 26px; font-weight: 800; color: #2D2A2E; margin: 0; padding-left: 20px; line-height: 35px; }
-                  blockquote { border-left: 3px solid #B5838D; padding-left: 10px; color: #6E6B70; font-style: italic; margin: 0; }
+                  body { font-family: -apple-system, 'Georgia', serif; font-size: 17px; line-height: 35px; margin: 0; padding: 0; color: ${theme.text}; }
+                  h1 { font-size: 26px; font-weight: 800; color: ${theme.text}; margin: 0; padding: 0; }
+                  h1 { font-size: 26px; font-weight: 800; color: ${theme.text}; margin: 0; padding-left: 20px; line-height: 35px; }
+                  blockquote { border-left: 3px solid ${theme.accent}; padding-left: 10px; color: ${theme.muted}; font-style: italic; margin: 0; }
                 `
               }}
               useContainer={true}
@@ -457,7 +464,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
             
             {/* Kept for backwards compatibility with older drafts */}
             {doodle && (
-              <View style={styles.doodlePreview}>
+              <View style={[styles.doodlePreview, { borderColor: theme.border, backgroundColor: theme.surface }]}>
                 <Image source={{ uri: doodle }} style={styles.doodleImage} />
                 <TouchableOpacity onPress={() => setDoodle(null)} style={styles.removeDoodle}><Text style={{color: '#FFF'}}>✕</Text></TouchableOpacity>
               </View>
@@ -472,20 +479,20 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
 
       <View style={styles.exportFooter}>
         <View style={styles.exportFooterHeader}>
-          <View style={styles.exportFooterLine} />
-          <Text style={styles.exportFooterLabel}>Export Note</Text>
-          <View style={styles.exportFooterLine} />
+          <View style={[styles.exportFooterLine, { backgroundColor: theme.border }]} />
+          <Text style={[styles.exportFooterLabel, { color: theme.muted }]}>Export Note</Text>
+          <View style={[styles.exportFooterLine, { backgroundColor: theme.border }]} />
         </View>
         <View style={styles.exportBtnRow}>
-          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnAesthetic]} onPress={generateAestheticPDF} activeOpacity={0.8}>
-            <Feather name="image" size={22} color="#D9A8B0" style={styles.exportBtnIcon} />
-            <Text style={styles.exportBtnTitle}>Aesthetic PDF</Text>
-            <Text style={styles.exportBtnSub}>Visual · Stickers</Text>
+          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnAesthetic, { backgroundColor: theme.accentSoft, borderColor: theme.accent + '50' }]} onPress={generateAestheticPDF} activeOpacity={0.8}>
+            <Feather name="image" size={22} color={theme.accent} style={styles.exportBtnIcon} />
+            <Text style={[styles.exportBtnTitle, { color: theme.text }]}>Aesthetic PDF</Text>
+            <Text style={[styles.exportBtnSub, { color: theme.muted }]}>Visual · Stickers</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnPro]} onPress={generateProfessionalPDF} activeOpacity={0.8}>
-            <Feather name="file-text" size={22} color="#9B92D9" style={styles.exportBtnIcon} />
-            <Text style={styles.exportBtnTitle}>Professional PDF</Text>
-            <Text style={styles.exportBtnSub}>Text · Clean</Text>
+          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnPro, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={generateProfessionalPDF} activeOpacity={0.8}>
+            <Feather name="file-text" size={22} color={theme.accent} style={styles.exportBtnIcon} />
+            <Text style={[styles.exportBtnTitle, { color: theme.text }]}>Professional PDF</Text>
+            <Text style={[styles.exportBtnSub, { color: theme.muted }]}>Text · Clean</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -515,6 +522,8 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   );
 }
 
+// 🎨 NOTE: Purane colors delete nahi kiye gaye hain, wo yahin rahenge as a blueprint.
+// Naye colors directly components mein { inline } inject kar diye gaye hain.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', padding: 20, paddingTop: 50 },
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
