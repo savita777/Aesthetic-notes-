@@ -8,6 +8,9 @@ import DailyStreakWidget from '../components/DailyStreakWidget';
 import StudygramShareModal from '../components/StudygramShareModal';
 import { useTheme } from '../context/ThemeContext'; 
 
+// 🚀 NAYA: Time Capsule Widget Import kiya
+import TimeCapsuleWidget from '../components/TimeCapsuleWidget';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 20 * 2 - 14) / 2;
 
@@ -23,6 +26,25 @@ const DEFAULT_GLASS = { tint: '#EAEAEA', emoji: '📂' };
 function getGlassPalette(subject) {
   return SUBJECT_GLASS[subject] || DEFAULT_GLASS;
 }
+
+// 🚀 NAYA: Helper function jo purane notes dhoondega (kam se kam 1 din purane)
+const getSurfacedNote = (notes) => {
+  if (!notes || notes.length === 0) return null;
+  
+  const pastNotes = notes.filter(note => {
+    const noteDate = new Date(note.createdAt || note.date).getTime();
+    if (isNaN(noteDate)) return false;
+    
+    const diffDays = (Date.now() - noteDate) / (1000 * 60 * 60 * 24);
+    return diffDays >= 1; // 1 din ya usse zyada purana
+  });
+
+  if (pastNotes.length === 0) return null;
+
+  // Purane notes mein se randomly ek note uthao
+  const randomIndex = Math.floor(Math.random() * pastNotes.length);
+  return pastNotes[randomIndex];
+};
 
 function CollectionCard({ subject, count, isActive, onPress }) {
   const { theme } = useTheme();
@@ -112,6 +134,9 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
   const [searchQuery, setSearchQuery] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
 
+  // 🚀 NAYA: Time Capsule ke liye surfaced note generate karo
+  const surfacedNote = getSurfacedNote(notes);
+
   const allSubjects = ['All Notes', '📓 Physics', '📐 Maths', '🧬 Biology', '📝 Journal', '💡 Ideas'];
 
   const filteredNotes = notes.filter(n => {
@@ -185,7 +210,16 @@ export default function HomeScreen({ notes, onSelectNote, onCreateNew, onLogout,
 
   const renderScrollableHeader = () => (
     <View style={{ paddingTop: 6 }}>
-      <View style={styles.widgetContainer}><DailyStreakWidget /></View>
+      <View style={styles.widgetContainer}>
+        <DailyStreakWidget />
+      </View>
+
+      {/* 🚀 NAYA: Time Capsule Widget inject kiya */}
+      <TimeCapsuleWidget
+        note={surfacedNote}
+        onPress={() => onSelectNote(surfacedNote)}
+      />
+
       <FocusReadBanner onPress={handleOpenFocusRead} />
       <View style={styles.sectionHeader}>
         <View>
@@ -293,4 +327,3 @@ const styles = StyleSheet.create({
   emptySubText: { fontSize: 14, color: '#8A8788', textAlign: 'center', lineHeight: 20 },
   fab: { position: 'absolute', right: 22, bottom: 38, backgroundColor: '#2D2A2E', width: 62, height: 62, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 6, shadowColor: '#2D2A2E', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 10 },
 });
-          
