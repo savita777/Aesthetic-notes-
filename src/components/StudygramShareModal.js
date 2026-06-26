@@ -1,111 +1,105 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Modal,
   View,
   Text,
+  Modal,
   TouchableOpacity,
   StyleSheet,
-  Animated,
-  Easing,
   Dimensions,
-  StatusBar,
   Platform,
+  ActivityIndicator,
   Alert,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
-import QRCode from 'react-native-qrcode-svg'; // 🚀 NAYA: QR Code library for viral marketing
+import { Feather } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg'; // 🚀 QR Code Wapas Aagaya!
+import { useTheme } from '../context/ThemeContext';
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK = {
-  streak: 12,
-  topic: 'Quantum Physics',
-  hoursToday: 2.5,
-  sessionsToday: 3,
-  date: new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }),
-  quote: 'small steps, every single day.',
-};
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+// Thoda lamba kiya (1:1.4 ratio) taaki QR code aur Note dono aesthetic lagen
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 48, 360);
+const CARD_HEIGHT = CARD_WIDTH * 1.4; 
 
-// Card is 9:16 ratio, fitting comfortably on screen with padding
-const CARD_W = Math.min(SCREEN_W - 48, 340);
-// 🚀 NAYA: Thoda lamba kiya hai taaki QR code fit aa jaye
-const CARD_H = Math.round(CARD_W * (17.5 / 9)); 
+const SERIF = Platform.OS === 'ios' ? 'Georgia' : 'serif';
 
-// ─── Component ────────────────────────────────────────────────────────────────
-export default function StudygramShareModal({ visible, onClose }) {
-  const viewShotRef = useRef(null);
+const CARD_PALETTES = [
+  { from: '#FDE8EE', to: '#FAD4DF', ink: '#4A2030', muted: 'rgba(74,32,48,0.45)' },
+  { from: '#E8F0FE', to: '#D2E3FC', ink: '#1A3055', muted: 'rgba(26,48,85,0.45)' },
+  { from: '#E8F5E9', to: '#C8E6C9', ink: '#1B4028', muted: 'rgba(27,64,40,0.45)' },
+  { from: '#FFF3E0', to: '#FFE0B2', ink: '#4A2800', muted: 'rgba(74,40,0,0.45)'  },
+  { from: '#F3E5F5', to: '#E1BEE7', ink: '#3A1248', muted: 'rgba(58,18,72,0.45)' },
+  { from: '#E0F7FA', to: '#B2EBF2', ink: '#00363A', muted: 'rgba(0,54,58,0.45)'  },
+  { from: '#FBE9E7', to: '#FFCCBC', ink: '#4E1500', muted: 'rgba(78,21,0,0.45)'  },
+  { from: '#F9FBE7', to: '#F0F4C3', ink: '#2E3300', muted: 'rgba(46,51,0,0.45)'  },
+];
 
-  // ── Entrance animations ──
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-  const cardAnim = useRef(new Animated.Value(0)).current;
-  const cardSlideAnim = useRef(new Animated.Value(40)).current;
+function paletteForTitle(title = '') {
+  const code = title.charCodeAt(0) || 0;
+  return CARD_PALETTES[code % CARD_PALETTES.length];
+}
 
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 300,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardAnim, {
-          toValue: 1,
-          duration: 420,
-          delay: 80,
-          easing: Easing.out(Easing.back(1.3)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cardSlideAnim, {
-          toValue: 0,
-          duration: 420,
-          delay: 80,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Reset for next open
-      backdropAnim.setValue(0);
-      cardAnim.setValue(0);
-      cardSlideAnim.setValue(40);
-    }
-  }, [visible]);
+function stripHtml(html = '') {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
-  // ── Share handler ──
+const CONTENT_CHAR_LIMIT = 280; // QR code ke liye jagah banane ke liye text thoda chota kiya
+const DEFAULT_TITLE = 'A Thought Worth Keeping';
+const DEFAULT_CONTENT = 'The mind is not a vessel to be filled, but a fire to be kindled.\n\n— Plutarch';
+
+export default function StudygramShareModal({ visible, onClose, note }) {
+  const { theme } = useTheme();
+  const cardRef = useRef(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const rawTitle   = note?.title?.trim()   || DEFAULT_TITLE;
+  const rawContent = note?.content?.trim() || DEFAULT_CONTENT;
+  const plainContent = stripHtml(rawContent);
+
+  const displayContent = plainContent.length > CONTENT_CHAR_LIMIT
+    ? plainContent.slice(0, plainContent.lastIndexOf(' ', CONTENT_CHAR_LIMIT)) + '…'
+    : plainContent;
+
+  const folder   = note?.folder || null;
+  const palette  = paletteForTitle(rawTitle);
+  const today    = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
   const handleShare = async () => {
+    if (!cardRef.current) return;
+    setIsCapturing(true);
     try {
-      if (!viewShotRef.current) return;
-
-      const uri = await viewShotRef.current.capture({
+      const uri = await cardRef.current.capture({
         format: 'png',
         quality: 1,
         result: 'tmpfile',
       });
-
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) {
-        Alert.alert(
-          'Sharing unavailable',
-          'Sharing is not available on this device.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Sharing Unavailable', 'Sharing is not supported on this device.');
         return;
       }
-
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png',
-        dialogTitle: 'Share your study streak ✨',
-        UTI: 'public.png',
+        dialogTitle: 'Share your Lumina card',
       });
     } catch (err) {
-      Alert.alert('Could not capture card', err?.message ?? 'Unknown error.');
+      Alert.alert('Could not capture card', err.message || 'Please try again.');
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -113,590 +107,159 @@ export default function StudygramShareModal({ visible, onClose }) {
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.6)" barStyle="light-content" />
+      <StatusBar backgroundColor="rgba(18,14,16,0.72)" barStyle="light-content" />
 
-      {/* ── Backdrop ── */}
-      <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-      </Animated.View>
+      <View style={styles.backdrop}>
+        <View style={[styles.sheet, { backgroundColor: theme.surface }]}>
 
-      {/* ── Sheet ── */}
-      <View style={styles.sheet} pointerEvents="box-none">
-        <Animated.View
-          style={[
-            styles.sheetInner,
-            {
-              opacity: cardAnim,
-              transform: [{ translateY: cardSlideAnim }, { scale: cardAnim }],
-            },
-          ]}
-        >
-          {/* ── Close button ── */}
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={onClose}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
+          <View style={styles.sheetHeader}>
+            <View>
+              <Text style={[styles.sheetTitle, { color: theme.text }]}>Share Card</Text>
+              <Text style={[styles.sheetSubtitle, { color: theme.muted }]}>
+                Save or share your thought as an image
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.closeIconBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+              onPress={onClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x" size={16} color={theme.muted} />
+            </TouchableOpacity>
+          </View>
 
-          {/* ── Label ── */}
-          <Text style={styles.previewLabel}>STORY PREVIEW</Text>
+          <ScrollView contentContainerStyle={styles.cardScroll} showsVerticalScrollIndicator={false}>
+            <ViewShot ref={cardRef} options={{ format: 'png', quality: 1 }}>
+              <View style={[styles.card, { width: CARD_WIDTH, height: CARD_HEIGHT, backgroundColor: palette.from }]}>
 
-          {/* ═══════════════════════════════════════
-              THE SHAREABLE CARD — only this is captured
-          ════════════════════════════════════════ */}
-          <ViewShot
-            ref={viewShotRef}
-            style={styles.card}
-            options={{ format: 'png', quality: 1 }}
-          >
-            {/* Layered gradient simulation */}
-            <View style={styles.cardBgLayer1} />
-            <View style={styles.cardBgLayer2} />
-            <View style={styles.cardBgLayer3} />
+                <View style={[styles.cardGradientLayer, { backgroundColor: palette.to }]} />
+                <View style={[styles.cornerAccent, { borderColor: palette.muted }]} />
+                <View style={[styles.cornerAccentBL, { borderColor: palette.muted }]} />
 
-            {/* Decorative corner dots */}
-            <View style={[styles.cornerDot, styles.cornerTL]} />
-            <View style={[styles.cornerDot, styles.cornerTR]} />
-            <View style={[styles.cornerDot, styles.cornerBL]} />
-            <View style={[styles.cornerDot, styles.cornerBR]} />
+                <View style={styles.cardBody}>
+                  <View style={styles.contentTop}>
+                    {folder ? (
+                      <View style={[styles.folderPill, { borderColor: palette.muted }]}>
+                        <Text style={[styles.folderPillText, { color: palette.muted }]}>{folder}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.folderPillPlaceholder} />
+                    )}
 
-            {/* ── Card content ── */}
-            <View style={styles.cardContent}>
+                    <Text style={[styles.quoteMark, { color: palette.muted }]}>"</Text>
+                    
+                    <Text style={[styles.cardTitle, { color: palette.ink }]} numberOfLines={3}>
+                      {rawTitle}
+                    </Text>
 
-              {/* Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.datePill}>
-                  <Text style={styles.datePillText}>{MOCK.date}</Text>
+                    <View style={[styles.rule, { backgroundColor: palette.muted }]} />
+
+                    <Text style={[styles.cardContent, { color: palette.ink }]}>
+                      {displayContent}
+                    </Text>
+                  </View>
+
+                  {/* 🚀 VIRAL MARKETING BLOCK (Merged safely) */}
+                  <View style={[styles.referralBlock, { borderColor: palette.muted }]}>
+                    <View style={[styles.qrContainer, { borderColor: palette.muted }]}>
+                      <QRCode 
+                        value="https://luminanotes.com/download" 
+                        size={38} 
+                        color={palette.ink} 
+                        backgroundColor="transparent" 
+                      />
+                    </View>
+                    <View style={styles.referralTextContainer}>
+                      <Text style={[styles.referralHeadline, { color: palette.ink }]}>Create your aesthetic library</Text>
+                      <Text style={[styles.referralCTA, { color: palette.muted }]}>Scan to download Lumina ↗</Text>
+                    </View>
+                  </View>
+
                 </View>
-                <Text style={styles.cardTitle}>My Daily Focus ✨</Text>
-                <Text style={styles.cardSubtitle}>today's study snapshot</Text>
-              </View>
 
-              {/* Streak Hero */}
-              <View style={styles.streakHero}>
-                <View style={styles.streakCircle}>
-                  <Text style={styles.streakFlame}>🔥</Text>
-                  <Text style={styles.streakNum}>{MOCK.streak}</Text>
-                  <Text style={styles.streakUnit}>day streak</Text>
-                </View>
-              </View>
-
-              {/* Stats row */}
-              <View style={styles.statsRow}>
-                <CardStat value={`${MOCK.hoursToday}h`} label="focused" color="#FFB3BA" />
-                <View style={styles.statsDivider} />
-                <CardStat value={MOCK.sessionsToday} label="sessions" color="#B5D8FF" />
-                <View style={styles.statsDivider} />
-                <CardStat value="1" label="goal done" color="#B5E5D8" />
-              </View>
-
-              {/* Topic Section */}
-              <View style={styles.topicBlock}>
-                <Text style={styles.topicEyebrow}>TODAY'S TOPIC</Text>
-                <View style={styles.topicPill}>
-                  <Text style={styles.topicIcon}>📖</Text>
-                  <Text style={styles.topicText}>{MOCK.topic}</Text>
-                </View>
-              </View>
-
-              {/* Progress bar */}
-              <View style={styles.progressSection}>
-                <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>Daily goal</Text>
-                  <Text style={styles.progressValue}>
-                    {MOCK.hoursToday}h / 4h
+                <View style={styles.cardFooter}>
+                  <Text style={[styles.footerDate, { color: palette.muted }]}>{today}</Text>
+                  <Text style={[styles.watermark, { color: palette.muted }]}>
+                    Thoughtfully yours, Lumina ✨
                   </Text>
                 </View>
-                <View style={styles.progressTrack}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${(MOCK.hoursToday / 4) * 100}%` },
-                    ]}
-                  >
-                    <View style={styles.progressShimmer} />
-                  </View>
-                </View>
               </View>
+            </ViewShot>
+          </ScrollView>
 
-              {/* Quote */}
-              <View style={styles.quoteRow}>
-                <View style={styles.quoteLine} />
-                <Text style={styles.quoteText}>"{MOCK.quote}"</Text>
-                <View style={styles.quoteLine} />
-              </View>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.btnCancel, { backgroundColor: theme.card, borderColor: theme.border }]}
+              onPress={onClose}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.btnCancelText, { color: theme.muted }]}>Cancel</Text>
+            </TouchableOpacity>
 
-              {/* 🚀 NAYA: The Viral Referral Block (Zero-Dollar Marketing) */}
-              <View style={styles.referralBlock}>
-                <View style={styles.qrContainer}>
-                  {/* Replace "https://luminanotes.com" with your actual app link */}
-                  <QRCode 
-                    value="https://luminanotes.com/download" 
-                    size={46} 
-                    color="#2D2A2E" 
-                    backgroundColor="transparent" 
-                  />
-                </View>
-                <View style={styles.referralTextContainer}>
-                  <Text style={styles.referralHeadline}>Create your aesthetic study space</Text>
-                  <Text style={styles.referralCTA}>Scan to download Lumina Notes ↗</Text>
-                </View>
-              </View>
-
-              {/* Watermark */}
-              <View style={styles.watermark}>
-                <View style={styles.watermarkDot} />
-                <Text style={styles.watermarkText}>Crafted with Lumina Notes 🌸</Text>
-                <View style={styles.watermarkDot} />
-              </View>
-            </View>
-          </ViewShot>
-          {/* ═══════════════════════════════════════ */}
-
-          {/* ── CTA ── */}
-          <TouchableOpacity
-            style={styles.shareBtn}
-            onPress={handleShare}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.shareBtnText}>Share to Instagram  📸</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.shareHint}>tap anywhere outside to dismiss</Text>
-        </Animated.View>
+            <TouchableOpacity
+              style={[styles.btnShare, { backgroundColor: theme.accent }]}
+              onPress={handleShare}
+              disabled={isCapturing}
+              activeOpacity={0.85}
+            >
+              {isCapturing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Feather name="send" size={15} color="#FFFFFF" />
+                  <Text style={styles.btnShareText}>Share to Story  ✦</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </Modal>
   );
 }
 
-// ─── CardStat ─────────────────────────────────────────────────────────────────
-function CardStat({ value, label, color }) {
-  return (
-    <View style={styles.statItem}>
-      <View style={[styles.statDot, { backgroundColor: color }]} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // ── Modal layers ──
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(20, 15, 18, 0.72)',
-  },
-  sheet: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sheetInner: {
-    alignItems: 'center',
-    width: CARD_W + 48,
-  },
+  backdrop: { flex: 1, backgroundColor: 'rgba(18, 14, 16, 0.72)', justifyContent: 'flex-end' },
+  sheet: { borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 16, paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 28, maxHeight: SCREEN_HEIGHT * 0.90, shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 20 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  sheetTitle: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3, marginBottom: 3 },
+  sheetSubtitle: { fontSize: 12, fontWeight: '500' },
+  closeIconBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  cardScroll: { alignItems: 'center', paddingBottom: 20 },
+  card: { borderRadius: 28, overflow: 'hidden', position: 'relative', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.14, shadowRadius: 20, elevation: 8 },
+  cardGradientLayer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%', opacity: 0.55, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  cornerAccent: { position: 'absolute', top: -CARD_WIDTH * 0.18, right: -CARD_WIDTH * 0.18, width: CARD_WIDTH * 0.45, height: CARD_WIDTH * 0.45, borderRadius: CARD_WIDTH * 0.225, borderWidth: 1, opacity: 0.25 },
+  cornerAccentBL: { position: 'absolute', bottom: -CARD_WIDTH * 0.12, left: -CARD_WIDTH * 0.12, width: CARD_WIDTH * 0.32, height: CARD_WIDTH * 0.32, borderRadius: CARD_WIDTH * 0.16, borderWidth: 1, opacity: 0.18 },
+  
+  cardBody: { flex: 1, paddingHorizontal: 28, paddingTop: 28, paddingBottom: 0, justifyContent: 'space-between' },
+  contentTop: { flex: 1 },
+  
+  folderPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1, marginBottom: 14 },
+  folderPillText: { fontSize: 10, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
+  folderPillPlaceholder: { height: 26, marginBottom: 14 },
+  quoteMark: { fontFamily: SERIF, fontSize: 64, lineHeight: 54, marginBottom: 4, opacity: 0.25 },
+  cardTitle: { fontFamily: SERIF, fontSize: 22, fontWeight: '700', lineHeight: 28, letterSpacing: -0.3, marginBottom: 12 },
+  rule: { width: 36, height: 1.5, borderRadius: 1, marginBottom: 14, opacity: 0.4 },
+  cardContent: { fontFamily: SERIF, fontSize: 13.5, lineHeight: 21, opacity: 0.82 },
+  
+  // NAYA: Referral Block Styles merged with Theme
+  referralBlock: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.3)', padding: 10, borderRadius: 14, borderWidth: 1, gap: 12, marginBottom: 12 },
+  qrContainer: { padding: 4, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 8, borderWidth: 1 },
+  referralTextContainer: { flex: 1, justifyContent: 'center' },
+  referralHeadline: { fontFamily: SERIF, fontStyle: 'italic', fontSize: 11, marginBottom: 2, fontWeight: '600' },
+  referralCTA: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  // ── Close ──
-  closeBtn: {
-    alignSelf: 'flex-end',
-    marginRight: 4,
-    marginBottom: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // ── Preview label ──
-  previewLabel: {
-    fontSize: 9,
-    letterSpacing: 2.5,
-    color: 'rgba(255,255,255,0.35)',
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-
-  // ── Card shell ──
-  card: {
-    width: CARD_W,
-    height: CARD_H,
-    borderRadius: 28,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(234,230,225,0.8)',
-    backgroundColor: '#FAF8F5',
-    shadowColor: '#B0A0A8',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 28,
-    elevation: 12,
-  },
-
-  // Gradient layers (stacked Views simulating soft pastel gradient)
-  cardBgLayer1: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FAF8F5',
-  },
-  cardBgLayer2: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: CARD_H * 0.45,
-    backgroundColor: 'rgba(255, 232, 237, 0.45)', // soft pink top blush
-    borderRadius: 28,
-  },
-  cardBgLayer3: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: CARD_H * 0.35,
-    backgroundColor: 'rgba(211, 234, 250, 0.3)', // soft sky bottom blush
-    borderRadius: 28,
-  },
-
-  // Decorative corner dots
-  cornerDot: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,179,186,0.4)',
-  },
-  cornerTL: { top: 18, left: 18 },
-  cornerTR: { top: 18, right: 18 },
-  cornerBL: { bottom: 18, left: 18 },
-  cornerBR: { bottom: 18, right: 18 },
-
-  // ── Card content ──
-  cardContent: {
-    flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 24,
-    paddingBottom: 16,
-    justifyContent: 'space-between',
-  },
-
-  // Header
-  cardHeader: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  datePill: {
-    backgroundColor: 'rgba(255,179,186,0.18)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255,179,186,0.3)',
-    marginBottom: 4,
-  },
-  datePillText: {
-    fontSize: 9.5,
-    color: '#C8848C',
-    letterSpacing: 0.8,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  cardTitle: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontSize: 22,
-    fontStyle: 'italic',
-    color: '#2D2A2E',
-    letterSpacing: 0.3,
-  },
-  cardSubtitle: {
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: '#C8BDBE',
-    textTransform: 'uppercase',
-    fontWeight: '500',
-  },
-
-  // Streak hero
-  streakHero: {
-    alignItems: 'center',
-  },
-  streakCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,213,0,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 14,
-    elevation: 4,
-    gap: 2,
-  },
-  streakFlame: {
-    fontSize: 22,
-  },
-  streakNum: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontSize: 30,
-    fontStyle: 'italic',
-    color: '#2D2A2E',
-    lineHeight: 32,
-  },
-  streakUnit: {
-    fontSize: 9.5,
-    color: '#C8BDBE',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    fontWeight: '500',
-  },
-
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.65)',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(234,230,225,0.8)',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-    gap: 3,
-    flex: 1,
-  },
-  statDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  statValue: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontStyle: 'italic',
-    fontSize: 17,
-    color: '#2D2A2E',
-    lineHeight: 20,
-  },
-  statLabel: {
-    fontSize: 8.5,
-    color: '#C8BDBE',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  statsDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#EAE6E1',
-  },
-
-  // Topic block
-  topicBlock: {
-    alignItems: 'center',
-    gap: 7,
-  },
-  topicEyebrow: {
-    fontSize: 9,
-    letterSpacing: 2,
-    color: '#C8BDBE',
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-  topicPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(234,230,225,0.9)',
-    gap: 8,
-    shadowColor: '#C8B8B0',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  topicIcon: { fontSize: 14 },
-  topicText: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontStyle: 'italic',
-    fontSize: 15,
-    color: '#2D2A2E',
-    letterSpacing: 0.2,
-  },
-
-  // Progress
-  progressSection: {
-    gap: 7,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontSize: 10,
-    color: '#B8ADAF',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    fontWeight: '500',
-  },
-  progressValue: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontStyle: 'italic',
-    fontSize: 12,
-    color: '#2D2A2E',
-  },
-  progressTrack: {
-    height: 7,
-    backgroundColor: 'rgba(234,230,225,0.7)',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FFB3BA',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  progressShimmer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '40%',
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 10,
-  },
-
-  // Quote
-  quoteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  quoteLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(234,230,225,0.8)',
-  },
-  quoteText: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontStyle: 'italic',
-    fontSize: 10.5,
-    color: '#C8BDBE',
-    textAlign: 'center',
-    flexShrink: 1,
-    letterSpacing: 0.3,
-  },
-
-  // 🚀 NAYA: Referral Block Styles
-  referralBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    padding: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,179,186,0.3)',
-    gap: 12,
-  },
-  qrContainer: {
-    padding: 4,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#EAE6E1',
-  },
-  referralTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  referralHeadline: {
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontStyle: 'italic',
-    fontSize: 11,
-    color: '#2D2A2E',
-    marginBottom: 2,
-  },
-  referralCTA: {
-    fontSize: 9,
-    color: '#B5838D',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-
-  // Watermark
-  watermark: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-  },
-  watermarkDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,179,186,0.5)',
-  },
-  watermarkText: {
-    fontSize: 9.5,
-    color: '#C8BDBE',
-    letterSpacing: 0.8,
-    fontWeight: '500',
-  },
-
-  // ── Share button ──
-  shareBtn: {
-    marginTop: 18,
-    backgroundColor: '#FFB3BA',
-    borderRadius: 30,
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    shadowColor: '#FFB3BA',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  shareBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2D2A2E',
-    letterSpacing: 0.3,
-  },
-
-  shareHint: {
-    marginTop: 12,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.28)',
-    letterSpacing: 1,
-  },
+  cardFooter: { paddingHorizontal: 28, paddingBottom: 24, paddingTop: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  footerDate: { fontSize: 9, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase', opacity: 0.6 },
+  watermark: { fontFamily: SERIF, fontSize: 9, fontStyle: 'italic', opacity: 0.55, textAlign: 'right', flexShrink: 1, marginLeft: 8 },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  btnCancel: { borderWidth: 1, borderRadius: 16, paddingVertical: 15, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  btnCancelText: { fontSize: 14, fontWeight: '600' },
+  btnShare: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 15, shadowColor: '#B5838D', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.32, shadowRadius: 10, elevation: 5 },
+  btnShareText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.2 },
 });
-            
+        
