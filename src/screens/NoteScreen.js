@@ -14,8 +14,9 @@ import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
 import AiSparkModal from '../components/AiSparkModal';
 
-// 🚀 NAYA: Apna naya NoteToolbar import kar liya
+// 🚀 NAYA: Dono naye components yahan import kiye gaye hain
 import NoteToolbar from '../components/NoteToolbar';
+import AiPreviewModal from '../components/AiPreviewModal';
 
 // Theme & Audio
 import { useTheme } from '../context/ThemeContext';
@@ -48,7 +49,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   const autoSaveTimer = useRef(null);
   const richEditorRef = useRef(null);
 
-  // ⚠️ NOTE: Delete nahi kiya hai jaisa aapne bola tha (Baad me hatayenge)
+  // ⚠️ NOTE: Delete nahi kiya hai jaisa aapne bola tha
   const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
   const washiColors = ['#FFD1DC', '#FDFD96', '#C1E1C1', '#AEC6CF', '#E6E6FA']; 
 
@@ -325,74 +326,25 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         </ScrollView>
       </View>
 
-      {isAiThinking && (
-        <View style={aiModalStyles.thinkingOverlay}>
-          <View style={[aiModalStyles.thinkingCard, { backgroundColor: theme.card }]}>
-            <View style={aiModalStyles.thinkingIconRing}>
-              <Text style={aiModalStyles.thinkingIcon}>✨</Text>
-            </View>
-            <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 4 }} />
-            <Text style={[aiModalStyles.thinkingTitle, { color: theme.text }]}>AI Spark is thinking…</Text>
-            <Text style={[aiModalStyles.thinkingSubtitle, { color: theme.muted }]}>Reading your notes carefully</Text>
-          </View>
-        </View>
-      )}
-
-      <Modal
+      {/* 🚀 NAYA: AI Preview Modal (Isne poore 100+ lines replace kar diye hain) */}
+      <AiPreviewModal 
         visible={isAiPreviewVisible}
-        animationType="slide"
-        transparent
-        statusBarTranslucent
-        onRequestClose={() => {
+        isThinking={isAiThinking}
+        content={aiPreviewContent}
+        theme={theme}
+        onClose={() => { setIsAiPreviewVisible(false); setAiPreviewContent(''); }}
+        onDiscard={() => { setIsAiPreviewVisible(false); setAiPreviewContent(''); }}
+        onInsert={() => {
+          const divider = `<div style="margin: 24px 0 10px; border-top: 1.5px dashed ${theme.accent}; opacity: 0.35;"></div>`;
+          const header = `<p style="font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: ${theme.accent}; margin: 0 0 10px;">✨ AI Spark</p>`;
+          const paragraphs = aiPreviewContent.split(/\n{2,}/).map(p => `<p style="margin: 0 0 12px; line-height: 1.75;">${p.trim().replace(/\n/g, '<br/>')}</p>`).join('');
+          const closingDivider = `<div style="margin: 10px 0 20px; border-top: 1.5px dashed ${theme.accent}; opacity: 0.35;"></div>`;
+
+          richEditorRef.current?.insertHTML(divider + header + paragraphs + closingDivider);
           setIsAiPreviewVisible(false);
           setAiPreviewContent('');
         }}
-      >
-        <View style={aiModalStyles.backdrop}>
-          <View style={[aiModalStyles.sheet, { backgroundColor: theme.surface }]}>
-            <View style={[aiModalStyles.handle, { backgroundColor: theme.border }]} />
-            <View style={[aiModalStyles.badge, { backgroundColor: theme.accentSoft }]}>
-              <Text style={[aiModalStyles.badgeText, { color: theme.accent }]}>✨ AI Spark Suggestion</Text>
-            </View>
-            <Text style={[aiModalStyles.sheetSubtitle, { color: theme.muted }]}>Review before inserting. Your note stays untouched until you approve.</Text>
-            
-            <View style={[aiModalStyles.contentCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <ScrollView style={aiModalStyles.contentScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-                <Text style={[aiModalStyles.contentText, { color: theme.text }]} selectable>{aiPreviewContent}</Text>
-              </ScrollView>
-            </View>
-
-            <View style={aiModalStyles.buttonRow}>
-              <TouchableOpacity
-                style={[aiModalStyles.btnDiscard, { backgroundColor: theme.card, borderColor: theme.border }]}
-                activeOpacity={0.75}
-                onPress={() => { setIsAiPreviewVisible(false); setAiPreviewContent(''); }}
-              >
-                <Feather name="x" size={15} color={theme.muted} />
-                <Text style={[aiModalStyles.btnDiscardText, { color: theme.muted }]}>Discard</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[aiModalStyles.btnInsert, { backgroundColor: theme.accent }]}
-                activeOpacity={0.85}
-                onPress={() => {
-                  const divider = `<div style="margin: 24px 0 10px; border-top: 1.5px dashed ${theme.accent}; opacity: 0.35;"></div>`;
-                  const header = `<p style="font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: ${theme.accent}; margin: 0 0 10px;">✨ AI Spark</p>`;
-                  const paragraphs = aiPreviewContent.split(/\n{2,}/).map(p => `<p style="margin: 0 0 12px; line-height: 1.75;">${p.trim().replace(/\n/g, '<br/>')}</p>`).join('');
-                  const closingDivider = `<div style="margin: 10px 0 20px; border-top: 1.5px dashed ${theme.accent}; opacity: 0.35;"></div>`;
-
-                  richEditorRef.current?.insertHTML(divider + header + paragraphs + closingDivider);
-                  setIsAiPreviewVisible(false);
-                  setAiPreviewContent('');
-                }}
-              >
-                <Feather name="plus" size={15} color="#FFFFFF" />
-                <Text style={aiModalStyles.btnInsertText}>Insert to Note</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      />
 
       <DrawModal 
         visible={showDraw} 
