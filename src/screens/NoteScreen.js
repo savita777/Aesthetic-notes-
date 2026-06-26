@@ -14,6 +14,9 @@ import DrawModal from '../components/DrawModal';
 import DraggableSticker from '../components/DraggableSticker';
 import AiSparkModal from '../components/AiSparkModal';
 
+// 🚀 NAYA: Apna naya NoteToolbar import kar liya
+import NoteToolbar from '../components/NoteToolbar';
+
 // Theme & Audio
 import { useTheme } from '../context/ThemeContext';
 import { MicButton, AudioPlaybackPill } from '../components/AudioRecorder';
@@ -36,7 +39,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   
   const [audioUri, setAudioUri] = useState(null); 
 
-  // 🚀 NAYA: Ethical AI States
+  // Ethical AI States
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [aiPreviewContent, setAiPreviewContent] = useState('');
   const [isAiPreviewVisible, setIsAiPreviewVisible] = useState(false);
@@ -45,6 +48,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   const autoSaveTimer = useRef(null);
   const richEditorRef = useRef(null);
 
+  // ⚠️ NOTE: Delete nahi kiya hai jaisa aapne bola tha (Baad me hatayenge)
   const stickersList = ['📌', '⭐️', '💡', '🧠', '📚', '🎯', '✏️', '📍']; 
   const washiColors = ['#FFD1DC', '#FDFD96', '#C1E1C1', '#AEC6CF', '#E6E6FA']; 
 
@@ -143,7 +147,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
     richEditorRef.current?.sendAction('hiliteColor', 'result', theme.accentSoft);
   };
 
-  // 🚀 NAYA: Ethical AI Handler (Replaced Old Logic)
   const handleAiAction = async (actionId) => {
     setShowAiModal(false);
 
@@ -153,7 +156,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       return;
     }
 
-    // Show loading overlay — nothing touches the editor yet
     setIsAiThinking(true);
 
     try {
@@ -172,7 +174,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
       const result =
         data?.reply || data?.text || data?.answer || data?.response || 'Lumina AI is speechless!';
 
-      // Store in preview — editor is untouched until user explicitly approves
       setAiPreviewContent(result);
       setIsAiPreviewVisible(true);
 
@@ -188,7 +189,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   };
 
   const generateProfessionalPDF = async () => {
-    // (Kept exact same logic as before to preserve functionality)
     if (!title.trim()) { Alert.alert('Oops!', 'Please enter a Topic Title! 📚'); return; }
     try {
       const bodyHtml = content; 
@@ -255,40 +255,15 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         multiline
       />
       
-      <View style={[styles.toolboxBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{alignItems: 'center'}}>
-          <TouchableOpacity onPress={() => setShowAiModal(true)} style={[styles.aiBtn, { backgroundColor: theme.accent }]}>
-            <Feather name="zap" size={14} color="#FFFFFF" />
-            <Text style={styles.aiBtnText}>AI Spark</Text>
-          </TouchableOpacity>
-          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-
-          <MicButton onRecordingComplete={(uri) => setAudioUri(uri)} />
-          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-
-          <TouchableOpacity onPress={applyHighlight} style={[styles.highlightBtn, { backgroundColor: theme.accentSoft }]}>
-            <Feather name="edit-3" size={14} color={theme.text} />
-            <Text style={[styles.highlightBtnText, { color: theme.text }]}>Mark</Text>
-          </TouchableOpacity>
-          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-          <Text style={[styles.toolLabel, { color: theme.muted }]}>Stickers:</Text>
-          {stickersList.map((emoji, index) => (
-             <TouchableOpacity key={'stk'+index} onPress={() => addPlacedItem('emoji', emoji)} style={styles.stickerBtn}>
-               <Text style={{fontSize:20}}>{emoji}</Text>
-             </TouchableOpacity>
-          ))}
-          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-          <Text style={[styles.toolLabel, { color: theme.muted }]}>Washi:</Text>
-          {washiColors.map((color, index) => (
-             <TouchableOpacity key={'wsh'+index} onPress={() => addPlacedItem('washi', color)} style={[styles.washiIcon, {backgroundColor: color}]} />
-          ))}
-          <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-          <TouchableOpacity onPress={() => setShowDraw(true)} style={[styles.drawBtn, { backgroundColor: theme.accentSoft }]}>
-            <Feather name="pen-tool" size={14} color={theme.text} />
-            <Text style={[styles.drawBtnText, { color: theme.text }]}>Draw</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+      {/* 🚀 NAYA: Yahan humne pura lamba code hatakar apna clean component daal diya */}
+      <NoteToolbar 
+        theme={theme}
+        onAiPress={() => setShowAiModal(true)}
+        onMicComplete={(uri) => setAudioUri(uri)}
+        onMarkPress={applyHighlight}
+        onWashiPress={(color) => addPlacedItem('washi', color)}
+        onDrawPress={() => setShowDraw(true)}
+      />
 
       <RichToolbar
         editor={richEditorRef}
@@ -350,7 +325,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         </ScrollView>
       </View>
 
-      {/* 🚀 NAYA: AI Thinking Overlay */}
       {isAiThinking && (
         <View style={aiModalStyles.thinkingOverlay}>
           <View style={[aiModalStyles.thinkingCard, { backgroundColor: theme.card }]}>
@@ -364,7 +338,6 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         </View>
       )}
 
-      {/* 🚀 NAYA: Ethical AI Preview Modal */}
       <Modal
         visible={isAiPreviewVisible}
         animationType="slide"
@@ -443,6 +416,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   );
 }
 
+// ⚠️ NOTE: Saare styles (chahe unka use na bhi ho) wahi ke wahi rakhe hain
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', padding: 20, paddingTop: 50 },
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
