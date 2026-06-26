@@ -452,7 +452,6 @@ const styles = StyleSheet.create({
   removeDoodle: { position: 'absolute', top: 10, right: 10, backgroundColor: '#2D2A2E', width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
 });
 
-// 🚀 NAYA: AI Modal Styles
 const aiModalStyles = StyleSheet.create({
   thinkingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30, 26, 28, 0.52)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
   thinkingCard: { width: 240, borderRadius: 28, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center', gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.18, shadowRadius: 28, elevation: 14 },
