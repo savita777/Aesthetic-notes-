@@ -222,6 +222,12 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         </TouchableOpacity>
         
         <View style={styles.headerActions}>
+          {/* 🚀 PDF Export Button Wapas Aagaya */}
+          <TouchableOpacity style={[styles.pdfBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={generateProfessionalPDF}>
+            <Feather name="download" size={14} color={theme.text} />
+            <Text style={[styles.pdfBtnText, { color: theme.text }]}>PDF</Text>
+          </TouchableOpacity>
+
           {note && ( 
             <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={handleDelete}>
               <Feather name="trash-2" size={14} color="#D9534F" />
@@ -256,7 +262,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         multiline
       />
       
-      {/* 🚀 NAYA: Yahan humne pura lamba code hatakar apna clean component daal diya */}
+      {/* 🚀 NAYA: NoteToolbar Component */}
       <NoteToolbar 
         theme={theme}
         onAiPress={() => setShowAiModal(true)}
@@ -326,7 +332,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
         </ScrollView>
       </View>
 
-      {/* 🚀 NAYA: AI Preview Modal (Isne poore 100+ lines replace kar diye hain) */}
+      {/* 🚀 NAYA: AI Preview Modal Component */}
       <AiPreviewModal 
         visible={isAiPreviewVisible}
         isThinking={isAiThinking}
@@ -357,7 +363,7 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
             const imgHtml = `<br><br><img src="${b64Data}" style="width: 100%; border-radius: 12px; border: 1px solid #EAE6E1;" /><br><br>`;
             richEditorRef.current?.insertHTML(imgHtml);
           } catch(e) {
-            console.log("Base64 conversion error:", e);
+            console.log("Drawing Error:", e);
             Alert.alert("Drawing Error", "Could not save the drawing.");
           }
         }} 
@@ -368,17 +374,18 @@ export default function NoteScreen({ note, onSave, onDelete, onBack }) {
   );
 }
 
-// ⚠️ NOTE: Saare styles (chahe unka use na bhi ho) wahi ke wahi rakhe hain
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F5', padding: 20, paddingTop: 50 },
   headerBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backButton: { fontSize: 16, color: '#8A8788', fontWeight: 'bold' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   saveBtn: { backgroundColor: '#2D2A2E', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 25 },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF0F3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 25, borderWidth: 1, borderColor: '#FFB3BA' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF0F3', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 25, borderWidth: 1, borderColor: '#FFB3BA' },
   deleteBtnText: { color: '#D9534F', fontWeight: '700', fontSize: 13 },
+  pdfBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 25, borderWidth: 1 },
+  pdfBtnText: { fontWeight: '700', fontSize: 13 },
   folderInput: { fontSize: 14, color: '#8A8788', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 },
   titleInput: { fontSize: 28, fontWeight: '800', color: '#2D2A2E', marginBottom: 15, lineHeight: 32 },
   toolboxBar: { backgroundColor: '#FFFFFF', paddingVertical: 10, paddingHorizontal: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EAE6E1', elevation: 1 },
