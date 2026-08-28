@@ -3,6 +3,10 @@ name: Build Aesthetic APK
 on:
   workflow_dispatch:
 
+# 🚀 NAYA: Release banane ke liye GitHub Actions ko permission deni padti hai
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,7 +25,6 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # 🚀 NAYA UPDATE: Force Install to bypass conflicts & Auto-Fix Expo packages
       - name: Install Dependencies
         run: |
           npm install --legacy-peer-deps
@@ -36,14 +39,19 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease
 
-      - name: Save APK directly to GitHub Repo
-        run: |
-          echo "Bypassing Artifact Quota! Saving APK directly to repo..."
-          mkdir -p Ready-APK
-          cp android/app/build/outputs/apk/release/app-release.apk Ready-APK/LuminaNotes.apk
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-          git add Ready-APK/LuminaNotes.apk
-          git commit -m "🚀 Add latest APK build [skip ci]"
-          git push
+      # 🚀 NAYA: Har build ke liye ek unique Time-based Tag banayega (e.g., v1.0.20241026)
+      - name: Generate Release Tag
+        id: tag
+        run: echo "RELEASE_TAG=v1.0.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+
+      # 🚀 NAYA: GitHub Release page banakar APK wahan upload karega
+      - name: Create GitHub Release & Upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Lumina Notes Build ${{ env.RELEASE_TAG }}
+          body: "🚀 New premium build of Lumina Notes is ready to install!"
+          files: android/app/build/outputs/apk/release/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
